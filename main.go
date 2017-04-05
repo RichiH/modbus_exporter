@@ -24,8 +24,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/goGryphOn/service/modbus"
-	"github.com/goGryphOn/service/parser"
+	"github.com/lupoDharkael/modbus_exporter/modbus"
+	"github.com/lupoDharkael/modbus_exporter/parser"
 
 	"github.com/lupoDharkael/modbus_exporter/config"
 )

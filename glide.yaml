@@ -1,0 +1,7 @@
+package: github.com/lupoDharkael/modbus_exporter
+import:
+- package: github.com/hashicorp/go-multierror
+- package: github.com/prometheus/client_golang
+  subpackages:
+  - prometheus/promhttp
+- package: gopkg.in/yaml.v2
