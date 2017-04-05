@@ -1,0 +1,23 @@
+Arduino1:
+  port: 'localhost:8080'
+  id: 1
+  timeout: 1000
+  baudrate: 19200
+  databits: 8
+  stopbits: 1
+  parity: 'E'
+  DigitalOut:
+  - "55:57"
+  AnalogIn:
+  - '62:65 = Humidity, Brightness'
+  - '53,101,102,154 = Sensor$...'
+Arduino2:
+  port: 'localhost:9090'
+  id: 2
+  timeout: 1000
+  baudrate: 9600
+  databits: 8
+  stopbits: 2
+  parity: 'N'
+  DigitalOut:
+  - '2 = sensorX'
