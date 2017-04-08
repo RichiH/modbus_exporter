@@ -47,8 +47,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	modbus.RegisterData(parsedSlaves)
-
+	err := modbus.RegisterData(parsedSlaves, slavesFile)
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Expose the registered metrics via HTTP.
 	http.Handle("/metrics", promhttp.Handler())
 	// log here
