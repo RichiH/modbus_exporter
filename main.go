@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	listenAddress = flag.String("listen-address", ":9009",
+	listenAddress = flag.String("listen-address", ":9010",
 		"The address to listen on for HTTP requests.")
 	configFile = flag.String("config.file", "slaves.yml",
 		"Sets the configuration file.")
@@ -47,7 +47,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err := modbus.RegisterData(parsedSlaves, slavesFile)
+	err = modbus.RegisterData(parsedSlaves, slavesFile)
 	if err != nil {
 		log.Fatal(err)
 	}
