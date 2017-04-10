@@ -38,11 +38,9 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 				handler.Timeout = time.Duration(conf[slave.Name].Timeout) * time.Millisecond
 			}
 			handler.SlaveId = conf[slave.Name].ID
-			// Connect manually so that multiple requests are handled in one connection session
 			if err := handler.Connect(); err != nil {
 				return err
 			}
-			defer handler.Close()
 			client = modbus.NewClient(handler)
 		case config.Serial:
 			handler := modbus.NewRTUClientHandler(conf[slave.Name].Port)
@@ -62,18 +60,93 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 				handler.Timeout = time.Duration(conf[slave.Name].Timeout) * time.Second
 			}
 			handler.SlaveId = conf[slave.Name].ID
-			// Connect manually so that multiple requests are handled in one connection session
 			if err := handler.Connect(); err != nil {
 				return err
 			}
-			defer handler.Close()
 			client = modbus.NewClient(handler)
 		}
-		scrapeSlave(slaves, client)
+		// starts the data scrapping routine
+		go scrapeSlave(slave, client)
 	}
 	return nil
 }
 
-func scrapeSlave(slaves []config.ParsedSlave, c modbus.Client) {
+func scrapeSlave(slave config.ParsedSlave, c modbus.Client) {
+	// fetches new data in constant intervals
+	for _ = range time.NewTicker(time.Second * 5).C {
+		if len(slave.DigitalInput) != 0 {
+			values := getModbusData(slave.DigitalInput, c.ReadDiscreteInputs)
+			for _, v := range values {
+				modbusDigital.WithLabelValues(
+					slave.Name, config.DigitalInput.String()).Set(v)
+			}
+		}
+		if len(slave.DigitalOutput) != 0 {
+			values := getModbusData(slave.DigitalOutput, c.ReadCoils)
+			for _, v := range values {
+				modbusDigital.WithLabelValues(
+					slave.Name, config.DigitalOutput.String()).Set(v)
+			}
+		}
+		if len(slave.AnalogInput) != 0 {
+			values := getModbusData(slave.AnalogInput, c.ReadInputRegisters)
+			for _, v := range values {
+				modbusAnalog.WithLabelValues(
+					slave.Name, config.AnalogInput.String()).Set(v)
+			}
+		}
+		if len(slave.AnalogOutput) != 0 {
+			values := getModbusData(slave.AnalogOutput, c.ReadHoldingRegisters)
+			for _, v := range values {
+				modbusAnalog.WithLabelValues(
+					slave.Name, config.AnalogOutput.String()).Set(v)
+			}
+		}
+	}
+}
 
+// modbus read function type
+type modbusFunc func(address, quantity uint16) ([]byte, error)
+
+// getModbusData returns the list of values from a slave
+func getModbusData(registers []config.Register, f modbusFunc) []float64 {
+	// results contains the values to be returned
+	results := make([]float64, 0, 125)
+	// temporal slice for every modbus query
+	var modBytes []byte
+	// saves first and last register value to be obtained
+	first := registers[0].Value
+	last := registers[len(registers)-1].Value
+	// error needed to evade the
+	var err error
+	// tracking of the actual index in the registers received as parameter
+	regIndex := 0
+
+	for i := ((last - first) / 125); i >= 0; i-- {
+		if i > 0 {
+			modBytes, err = f(first, 125)
+			if err != nil {
+				temp := make([]float64, 125)
+				results = append(results, temp...)
+				continue
+			}
+			first += 125
+		} else if (last - first) != 0 {
+			modBytes, err = f(first, last-first)
+			if err != nil {
+				temp := make([]float64, (last - first))
+				results = append(results, temp...)
+				continue
+			}
+		}
+		for indexRes := 0; indexRes <= len(modBytes); indexRes += 2 {
+			if registers[0].Value+uint16(indexRes/2) == registers[regIndex].Value {
+				data := float64(modBytes[indexRes])*256 + float64(modBytes[indexRes+1])
+				results = append(results, data)
+				regIndex++
+				continue
+			}
+		}
+	}
+	return results
 }
