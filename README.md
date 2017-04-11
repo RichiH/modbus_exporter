@@ -63,7 +63,5 @@ Your are allowed to use the “enumerator” with the symbol $ at the end of the
 - The use of no parity requires 2 stop bits.
 
 ## TODO
-- Implement loging with Logrus
-- Improve help format
 - General clean up
 - Finish modbus logic

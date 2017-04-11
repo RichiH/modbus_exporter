@@ -19,10 +19,10 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/log"
 
 	"github.com/lupoDharkael/modbus_exporter/modbus"
 	"github.com/lupoDharkael/modbus_exporter/parser"
@@ -41,19 +41,20 @@ func main() {
 	flag.Parse()
 	slavesFile, err := config.LoadSlaves(*configFile)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 	parsedSlaves, err := parser.ParseSlaves(slavesFile)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 	err = modbus.RegisterData(parsedSlaves, slavesFile)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 	// Expose the registered metrics via HTTP.
 	http.Handle("/metrics", promhttp.Handler())
-	// log here
-	log.Fatal(http.ListenAndServe(*listenAddress, nil))
+
+	log.Infoln("Listening on ", *listenAddress)
+	log.Fatalln(http.ListenAndServe(*listenAddress, nil))
 
 }

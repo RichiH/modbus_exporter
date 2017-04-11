@@ -1,5 +1,5 @@
-hash: 5f78612b1912997ade2c2184e683bb29b2e3d9e34d241bb012bd4ca8dd0cf31b
-updated: 2017-04-08T12:50:51.567268281+02:00
+hash: a2b475cecdce596ecc2c9076c11d5a30d135d65f55f35e82bfbbaab9a86b905c
+updated: 2017-04-11T12:04:19.040437371+02:00
 imports:
 - name: github.com/beorn7/perks
   version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
@@ -40,6 +40,8 @@ imports:
   version: a1dba9ce8baed984a2495b658c82687f8157b98f
   subpackages:
   - xfs
+- name: github.com/Sirupsen/logrus
+  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: gopkg.in/yaml.v2
   version: a3f3340b5840cee44f372bddb5880fcbc419b46a
 testImports: []
