@@ -76,13 +76,13 @@ var (
 func TestValidate(t *testing.T) {
 	for _, s := range slavesGood {
 		if err := ValidateSlave(&s, "TestedSlave"); err != nil {
-			t.Errorf("Validation of %v expected to pass but received the error:\n"+
+			t.Errorf("validation of %v expected to pass but received the error:\n"+
 				"%s", s.PrettyString(), err)
 		}
 	}
 	for _, s := range slavesBad {
 		if err := ValidateSlave(&s, "TestedSlave"); err == nil {
-			t.Errorf("Validation of %v expected to fail but it didn't.",
+			t.Errorf("validation of %v expected to fail but it didn't.",
 				s.PrettyString())
 		}
 	}

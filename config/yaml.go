@@ -141,41 +141,41 @@ func ValidateSlave(s *Slave, alias string) error {
 	var err error
 	switch CheckPortSlave(s) {
 	case Invalid:
-		newErr := fmt.Errorf("Invalid port \"%s\" in slave \"%s\"", s.Port, alias)
+		newErr := fmt.Errorf("invalid port \"%s\" in slave \"%s\"", s.Port, alias)
 		err = multierror.Append(err, newErr)
 	// checking the specific parameters for a serial connection
 	case Serial:
 		if s.Baudrate < 0 || s.Stopbits < 0 || s.Databits < 0 || s.Timeout < 0 {
-			newErr := fmt.Errorf("Invalid negative value in slave \"%s\"", alias)
+			newErr := fmt.Errorf("invalid negative value in slave \"%s\"", alias)
 			err = multierror.Append(err, newErr)
 		}
 		// Data bits: default, 5, 6, 7 or 8
 		if s.Databits != 0 && (s.Databits < 5 || s.Databits > 8) {
-			newErr := fmt.Errorf("Invalid data bits value in slave \"%s\"", alias)
+			newErr := fmt.Errorf("invalid data bits value in slave \"%s\"", alias)
 			err = multierror.Append(err, newErr)
 		}
 		// Stop bits: default, 1 or 2
 		if s.Stopbits > 2 {
-			newErr := fmt.Errorf("Invalid stop bits value in slave \"%s\"", alias)
+			newErr := fmt.Errorf("invalid stop bits value in slave \"%s\"", alias)
 			err = multierror.Append(err, newErr)
 		}
 		// Parity: N (None), E (Even), O (Odd)
 		if s.Parity != "N" && s.Parity != "E" && s.Parity != "O" &&
 			s.Parity != "" {
-			newErr := fmt.Errorf("Invalid parity value in slave \"%s\" "+
+			newErr := fmt.Errorf("invalid parity value in slave \"%s\" "+
 				"N (None), E (Even), O (Odd)", alias)
 			err = multierror.Append(err, newErr)
 		}
 		// The use of no parity requires 2 stop bits.
-		if s.Parity == "N" && s.Stopbits != 2 {
-			newErr := fmt.Errorf("The use of no parity requires 2 stop bits in "+
-				"slave \"%s\"", alias)
-			err = multierror.Append(err, newErr)
-		}
+		// if s.Parity == "N" && s.Stopbits != 2 {
+		// 	newErr := fmt.Errorf("the use of no parity requires 2 stop bits in "+
+		// 		"slave \"%s\"", alias)
+		// 	err = multierror.Append(err, newErr)
+		// }
 	// checking the absence of specific parameters for a serial connection
 	case IP:
 		if s.Parity != "" || s.Stopbits != 0 || s.Databits != 0 || s.Baudrate != 0 {
-			newErr := fmt.Errorf("Invalid argument in slave %s, TCP slaves desn't"+
+			newErr := fmt.Errorf("invalid argument in slave %s, TCP slaves desn't"+
 				"use Parity, Stopbits, Databits or Baudrate.", alias)
 			err = multierror.Append(err, newErr)
 		}
