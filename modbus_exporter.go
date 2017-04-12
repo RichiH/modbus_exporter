@@ -43,6 +43,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	log.Infoln("Loading configuration file", *configFile)
 	parsedSlaves, err := parser.ParseSlaves(slavesFile)
 	if err != nil {
 		log.Fatalln(err)

@@ -8,7 +8,7 @@ var (
 			Name: "modbus_digital_total",
 			Help: "Modbus digital registers.",
 		},
-		[]string{"slave", "type"},
+		[]string{"slave", "type", "name"},
 	)
 
 	modbusAnalog = prometheus.NewGaugeVec(
@@ -16,7 +16,7 @@ var (
 			Name: "modbus_analog_total",
 			Help: "Modbus analog registers.",
 		},
-		[]string{"slave", "type"},
+		[]string{"slave", "type", "name"},
 	)
 )
 
