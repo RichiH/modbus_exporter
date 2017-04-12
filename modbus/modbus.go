@@ -57,7 +57,7 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 				handler.StopBits = conf[slave.Name].Stopbits
 			}
 			if conf[slave.Name].Timeout != 0 {
-				handler.Timeout = time.Duration(conf[slave.Name].Timeout) * time.Second
+				handler.Timeout = time.Duration(conf[slave.Name].Timeout) * time.Millisecond
 			}
 			handler.SlaveId = conf[slave.Name].ID
 			if err := handler.Connect(); err != nil {

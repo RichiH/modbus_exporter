@@ -1,0 +1,18 @@
+Arduino1:
+  port: "/dev/ttyUSB0"
+  id: 1
+  timeout: 1000   # in miliseconds
+  baudrate: 19200
+  databits: 8
+  stopbits: 1
+  parity: 'N'
+  DigitalIn:
+  - 55:60         # auto naming from 55 to 60
+  AnalogOut:
+  - 2:5 = Temperature$... # range with enumeration
+  - 53, 101, 102, 154 = Fog$, Humidity_$, Fog # indivisual asignation
+Arduino2: # with defaults
+  port: 'localhost:9090'
+  id: 2
+  DigitalOut:
+  - '2 = sensorX'
