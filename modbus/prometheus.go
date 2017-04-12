@@ -6,7 +6,7 @@ var (
 	modbusDigital = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "modbus_digital_total",
-			Help: "",
+			Help: "Modbus digital registers.",
 		},
 		[]string{"slave", "type"},
 	)
@@ -14,7 +14,7 @@ var (
 	modbusAnalog = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "modbus_analog_total",
-			Help: "",
+			Help: "Modbus analog registers.",
 		},
 		[]string{"slave", "type"},
 	)
