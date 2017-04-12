@@ -2,17 +2,17 @@ Arduino1:
   port: 'localhost:8080'
   id: 1
   timeout: 1000   # in miliseconds
-  DigitalOut:
+  digitalOut:
   - "55:57"
-  AnalogIn:
+  analogIn:
   - '62:65 = Humidity, Brightness'
   - '53,101,102,154 = Sensor$...'
 Arduino2:
   port: '192.168.0.99:9090'
   id: 2
-  DigitalIn:
+  digitalIn:
   - 2 = Light_$
   - 34:56 = sensor$,sensorA$,sensorA$ # individual naming of first elements
-  AnalogOut:
+  analogOut:
   - 62:65 = motor_F, motor_F, motor_G, motor_G
   - 66 = otherSensor

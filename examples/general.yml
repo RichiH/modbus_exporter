@@ -6,18 +6,18 @@ Arduino1:
   databits: 8
   stopbits: 1
   parity: N
-  DigitalOut:
+  digitalOut:
   - 55:60         # auto naming from 55 to 60
-  AnalogIn:
+  analogIn:
   - 2:5 = Temperature$... # range with enumeration
   - 53, 101, 102, 154 = Fog$, Humidity_$, Fog # indivisual asignation
 Arduino2:
   port: "localhost:9090"
   id: 2
   timeout: 1000
-  DigitalIn:
+  digitalIn:
   - 2 = Light_$
-  - 34:56 =sensor$,sensorA$,sensorA$ # individual naming of first elements
-  AnalogOut:
+  - 34:56 = sensor$,sensorA$,sensorA$ # individual naming of first elements
+  analogOut:
   - 62:65 = motor_F, motor_F, motor_G, motor_G
   - 66 = otherSensor

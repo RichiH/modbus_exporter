@@ -43,10 +43,10 @@ type Slave struct {
 	Databits      int      `yaml:"databits"`
 	Stopbits      int      `yaml:"stopbits"`
 	Parity        string   `yaml:"parity"`
-	DigitalInput  []string `yaml:"DigitalIn"`
-	DigitalOutput []string `yaml:"DigitalOut"`
-	AnalogInput   []string `yaml:"AnalogIn"`
-	AnalogOutput  []string `yaml:"AnalogOut"`
+	DigitalInput  []string `yaml:"digitalIn"`
+	DigitalOutput []string `yaml:"digitalOut"`
+	AnalogInput   []string `yaml:"analogIn"`
+	AnalogOutput  []string `yaml:"analogOut"`
 }
 
 // PrettyString prints only the initialized values

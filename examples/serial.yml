@@ -6,13 +6,13 @@ Arduino1:
   databits: 8
   stopbits: 1
   parity: 'N'
-  DigitalIn:
+  digitalIn:
   - 55:60         # auto naming from 55 to 60
-  AnalogOut:
+  analogOut:
   - 2:5 = Temperature$... # range with enumeration
   - 53, 101, 102, 154 = Fog$, Humidity_$, Fog # indivisual asignation
 Arduino2: # with defaults
   port: 'localhost:9090'
   id: 2
-  DigitalOut:
+  digitalOut:
   - '2 = sensorX'
