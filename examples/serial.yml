@@ -12,7 +12,7 @@ Arduino1:
   - 2:5 = Temperature$... # range with enumeration
   - 53, 101, 102, 154 = Fog$, Humidity_$, Fog # indivisual asignation
 Arduino2: # with defaults
-  port: 'localhost:9090'
+  port: '/dev/ttyUSB1'
   id: 2
   digitalOut:
   - '2 = sensorX'

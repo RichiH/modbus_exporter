@@ -5,7 +5,7 @@ Arduino1:
   baudrate: 19200
   databits: 8
   stopbits: 1
-  parity: 'N'
+  parity: 'E'
   digitalOut:
   - 55:60         # auto naming from 55 to 60
   analogIn:
