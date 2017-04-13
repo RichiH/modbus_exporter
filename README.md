@@ -3,6 +3,12 @@ Exporter which retrieves stats from a modbus system and exports them via HTTP fo
 
 **DO NOT USE THIS EXPORTER (NOT YET), IT REQUIRES MORE WORK IN ORDER TO BE RELIABLE.**
 
+## Building
+you just need Go installed, simply run hte build in the directory as:
+```bash
+go build
+```
+
 ## Getting Started
 
 To run it:
@@ -26,7 +32,7 @@ Help on flags:
 
 ## Configuration File
 
-Check the `examples/` file to read the information about the configuration file and some examples.
+Check the `examples/` folder to read the information about the configuration file and some examples.
 
 ## General information
 - Default values:
@@ -39,4 +45,4 @@ Check the `examples/` file to read the information about the configuration file 
 
 ## TODO
 - General clean up
-- Finish modbus logic
+- Implement digital register processing
