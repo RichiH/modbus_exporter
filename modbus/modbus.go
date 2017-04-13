@@ -80,9 +80,8 @@ func scrapeSlave(slave config.ParsedSlave, c modbus.Client) {
 		if len(slave.DigitalInput) != 0 {
 			values := getModbusData(slave.DigitalInput, c.ReadDiscreteInputs, config.DigitalInput)
 			for i, v := range values {
-				modbusDigital.WithLabelValues(
+				modbusDigitalIn.WithLabelValues(
 					slave.Name,
-					config.DigitalInput.String(),
 					slave.DigitalInput[i].Name,
 				).Set(v)
 			}
@@ -90,9 +89,8 @@ func scrapeSlave(slave config.ParsedSlave, c modbus.Client) {
 		if len(slave.DigitalOutput) != 0 {
 			values := getModbusData(slave.DigitalOutput, c.ReadCoils, config.DigitalOutput)
 			for i, v := range values {
-				modbusDigital.WithLabelValues(
+				modbusDigitalOut.WithLabelValues(
 					slave.Name,
-					config.DigitalOutput.String(),
 					slave.DigitalOutput[i].Name,
 				).Set(v)
 			}
@@ -100,9 +98,8 @@ func scrapeSlave(slave config.ParsedSlave, c modbus.Client) {
 		if len(slave.AnalogInput) != 0 {
 			values := getModbusData(slave.AnalogInput, c.ReadInputRegisters, config.AnalogInput)
 			for i, v := range values {
-				modbusAnalog.WithLabelValues(
+				modbusAnalogIn.WithLabelValues(
 					slave.Name,
-					config.AnalogInput.String(),
 					slave.AnalogInput[i].Name,
 				).Set(v)
 			}
@@ -110,9 +107,8 @@ func scrapeSlave(slave config.ParsedSlave, c modbus.Client) {
 		if len(slave.AnalogOutput) != 0 {
 			values := getModbusData(slave.AnalogOutput, c.ReadHoldingRegisters, config.AnalogOutput)
 			for i, v := range values {
-				modbusAnalog.WithLabelValues(
+				modbusAnalogOut.WithLabelValues(
 					slave.Name,
-					config.AnalogOutput.String(),
 					slave.AnalogOutput[i].Name,
 				).Set(v)
 			}

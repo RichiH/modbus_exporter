@@ -3,24 +3,41 @@ package modbus
 import "github.com/prometheus/client_golang/prometheus"
 
 var (
-	modbusDigital = prometheus.NewGaugeVec(
+	modbusDigitalIn = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "modbus_digital_total",
-			Help: "Modbus digital registers.",
+			Help: "Modbus digital input registers.",
 		},
-		[]string{"slave", "type", "name"},
+		[]string{"slave", "name"},
 	)
 
-	modbusAnalog = prometheus.NewGaugeVec(
+	modbusAnalogIn = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "modbus_analog_total",
-			Help: "Modbus analog registers.",
+			Help: "Modbus analog input registers.",
 		},
-		[]string{"slave", "type", "name"},
+		[]string{"slave", "name"},
+	)
+	modbusDigitalOut = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "modbus_digital_total",
+			Help: "Modbus digital output registers.",
+		},
+		[]string{"slave", "name"},
+	)
+
+	modbusAnalogOut = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "modbus_analog_total",
+			Help: "Modbus analog output registers.",
+		},
+		[]string{"slave", "name"},
 	)
 )
 
 func init() {
-	prometheus.MustRegister(modbusDigital)
-	prometheus.MustRegister(modbusAnalog)
+	prometheus.MustRegister(modbusDigitalIn)
+	prometheus.MustRegister(modbusDigitalOut)
+	prometheus.MustRegister(modbusAnalogIn)
+	prometheus.MustRegister(modbusAnalogOut)
 }
