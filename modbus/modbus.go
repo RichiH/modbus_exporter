@@ -19,6 +19,7 @@
 package modbus
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/goburrow/modbus"
@@ -39,7 +40,8 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 			}
 			handler.SlaveId = conf[slave.Name].ID
 			if err := handler.Connect(); err != nil {
-				return err
+				return fmt.Errorf("unable to connect with slave %s at %s",
+					slave.Name, conf[slave.Name].Port)
 			}
 			client = modbus.NewClient(handler)
 		case config.Serial:
@@ -61,7 +63,8 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 			}
 			handler.SlaveId = conf[slave.Name].ID
 			if err := handler.Connect(); err != nil {
-				return err
+				return fmt.Errorf("unable to connect with slave %s at %s",
+					slave.Name, conf[slave.Name].Port)
 			}
 			client = modbus.NewClient(handler)
 		}
@@ -75,31 +78,43 @@ func scrapeSlave(slave config.ParsedSlave, c modbus.Client) {
 	// fetches new data in constant intervals
 	for _ = range time.NewTicker(time.Second * 5).C {
 		if len(slave.DigitalInput) != 0 {
-			values := getModbusData(slave.DigitalInput, c.ReadDiscreteInputs)
-			for _, v := range values {
+			values := getModbusData(slave.DigitalInput, c.ReadDiscreteInputs, config.DigitalInput)
+			for i, v := range values {
 				modbusDigital.WithLabelValues(
-					slave.Name, config.DigitalInput.String()).Set(v)
+					slave.Name,
+					config.DigitalInput.String(),
+					slave.DigitalInput[i].Name,
+				).Set(v)
 			}
 		}
 		if len(slave.DigitalOutput) != 0 {
-			values := getModbusData(slave.DigitalOutput, c.ReadCoils)
-			for _, v := range values {
+			values := getModbusData(slave.DigitalOutput, c.ReadCoils, config.DigitalOutput)
+			for i, v := range values {
 				modbusDigital.WithLabelValues(
-					slave.Name, config.DigitalOutput.String()).Set(v)
+					slave.Name,
+					config.DigitalOutput.String(),
+					slave.DigitalOutput[i].Name,
+				).Set(v)
 			}
 		}
 		if len(slave.AnalogInput) != 0 {
-			values := getModbusData(slave.AnalogInput, c.ReadInputRegisters)
-			for _, v := range values {
+			values := getModbusData(slave.AnalogInput, c.ReadInputRegisters, config.AnalogInput)
+			for i, v := range values {
 				modbusAnalog.WithLabelValues(
-					slave.Name, config.AnalogInput.String()).Set(v)
+					slave.Name,
+					config.AnalogInput.String(),
+					slave.AnalogInput[i].Name,
+				).Set(v)
 			}
 		}
 		if len(slave.AnalogOutput) != 0 {
-			values := getModbusData(slave.AnalogOutput, c.ReadHoldingRegisters)
-			for _, v := range values {
+			values := getModbusData(slave.AnalogOutput, c.ReadHoldingRegisters, config.AnalogOutput)
+			for i, v := range values {
 				modbusAnalog.WithLabelValues(
-					slave.Name, config.AnalogOutput.String()).Set(v)
+					slave.Name,
+					config.AnalogOutput.String(),
+					slave.AnalogOutput[i].Name,
+				).Set(v)
 			}
 		}
 	}
@@ -109,7 +124,7 @@ func scrapeSlave(slave config.ParsedSlave, c modbus.Client) {
 type modbusFunc func(address, quantity uint16) ([]byte, error)
 
 // getModbusData returns the list of values from a slave
-func getModbusData(registers []config.Register, f modbusFunc) []float64 {
+func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) []float64 {
 	// results contains the values to be returned
 	results := make([]float64, 0, 125)
 	// temporal slice for every modbus query
@@ -121,30 +136,51 @@ func getModbusData(registers []config.Register, f modbusFunc) []float64 {
 	var err error
 	// tracking of the actual index in the registers received as parameter
 	regIndex := 0
-
-	for i := ((last - first) / 125); i >= 0; i-- {
-		if i > 0 {
-			modBytes, err = f(first, 125)
+	// range of elements to be queried
+	rangeN := (last - first) + 1
+	// number of maximum values per query
+	var div uint16
+	switch t {
+	case config.DigitalInput, config.DigitalOutput:
+		div = 2000 // max registers for a digital query
+	case config.AnalogInput, config.AnalogOutput:
+		div = 125 // max registers for an analog query
+	}
+	for it := int(rangeN / div); it >= 0; it-- {
+		if it > 0 {
+			// query the maximum number of registers
+			modBytes, err = f(first, div)
 			if err != nil {
-				temp := make([]float64, 125)
+				temp := make([]float64, div)
 				results = append(results, temp...)
 				continue
 			}
-			first += 125
-		} else if (last - first) != 0 {
-			modBytes, err = f(first, last-first)
+			first += div
+		} else {
+			// query the last elements denoted by the incremented 'first' and the last
+			modBytes, err = f(first, (last-first)+1)
 			if err != nil {
-				temp := make([]float64, (last - first))
+				temp := make([]float64, (last-first)+1)
 				results = append(results, temp...)
 				continue
 			}
 		}
-		for indexRes := 0; indexRes <= len(modBytes); indexRes += 2 {
-			if registers[0].Value+uint16(indexRes/2) == registers[regIndex].Value {
-				data := float64(modBytes[indexRes])*256 + float64(modBytes[indexRes+1])
-				results = append(results, data)
-				regIndex++
-				continue
+		switch t {
+		case config.DigitalInput, config.DigitalOutput:
+			for i := 0; i < int(rangeN); i++ {
+				if registers[0].Value+uint16(i) == registers[regIndex].Value {
+					data := float64((modBytes[i/8] >> uint16(i) % 8) & 1)
+					results = append(results, data)
+					regIndex++
+				}
+			}
+		case config.AnalogInput, config.AnalogOutput:
+			for i := 0; i < int(rangeN); i++ {
+				if registers[0].Value+uint16(i) == registers[regIndex].Value {
+					data := float64(modBytes[i*2])*256 + float64(modBytes[(i*2)+1])
+					results = append(results, data)
+					regIndex++
+				}
 			}
 		}
 	}

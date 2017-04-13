@@ -19,9 +19,9 @@ To run it:
 
 The configuration will be taken from a configuration file, the exporter will search a fille called `slaves.yml` in the same directory by default.
 
-Setting a different file:
+Setting a different file and a different listen address:
 ```bash
-./modbus_exporter -config.file="path/to/file" [flags]
+./modbus_exporter -config.file="path/to/file" -listen-address=":8080"
 ```
 
 Help on flags:
@@ -45,4 +45,5 @@ Check the `examples/` folder to read the information about the configuration fil
 
 ## TODO
 - General clean up
-- Implement digital register processing
+- Tons of test coverage
+- Tons of testing with real slaves
