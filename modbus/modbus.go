@@ -20,21 +20,31 @@ package modbus
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"time"
 
 	"github.com/goburrow/modbus"
 	"github.com/lupoDharkael/modbus_exporter/config"
+	"github.com/lupoDharkael/modbus_exporter/glog"
 )
+
+func init() {
+	log.SetOutput(ioutil.Discard)
+}
 
 // RegisterData receives the data of the modbus systems and start querying the
 // modbus slaves in regular intervals in order to expose the data to prometheus
 func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 	for _, slave := range slaves {
-		var client modbus.Client
+		//var client modbus.Client
 		// creates the client (TCP-IP or Serial)
 		switch config.CheckPortSlave(conf[slave.Name]) {
 		case config.IP:
 			handler := modbus.NewTCPClientHandler(conf[slave.Name].Port)
+			// diable logger
+			handler.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
+			//handler.Logger.SetFlags(0)
 			if conf[slave.Name].Timeout != 0 {
 				handler.Timeout = time.Duration(conf[slave.Name].Timeout) * time.Millisecond
 			}
@@ -43,9 +53,13 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 				return fmt.Errorf("unable to connect with slave %s at %s",
 					slave.Name, conf[slave.Name].Port)
 			}
-			client = modbus.NewClient(handler)
+			// starts the data scrapping routine
+			go scrapeSlave(slave, Handler{handler})
 		case config.Serial:
 			handler := modbus.NewRTUClientHandler(conf[slave.Name].Port)
+			// diable logger
+			handler.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
+			//handler.Logger.SetFlags(0)
 			if conf[slave.Name].Baudrate != 0 {
 				handler.BaudRate = conf[slave.Name].Baudrate
 			}
@@ -66,51 +80,110 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 				return fmt.Errorf("unable to connect with slave %s at %s",
 					slave.Name, conf[slave.Name].Port)
 			}
-			client = modbus.NewClient(handler)
+			// starts the data scrapping routine
+			go scrapeSlave(slave, Handler{handler})
 		}
-		// starts the data scrapping routine
-		go scrapeSlave(slave, client)
 	}
 	return nil
 }
 
-func scrapeSlave(slave config.ParsedSlave, c modbus.Client) {
+// Handler is an API helper to manage a modbus handler
+type Handler struct {
+	//Handler         modbus.ClientHandler
+	Handler interface {
+		modbus.ClientHandler
+		Connect() error
+		Close() error
+	}
+}
+
+// Connect starts the connection
+func (hc *Handler) Connect() error {
+	return hc.Handler.Connect()
+}
+
+// Close closes the connection
+func (hc *Handler) Close() error {
+	return hc.Handler.Close()
+}
+
+func scrapeSlave(slave config.ParsedSlave, hc Handler) { //c modbus.Client) {
 	// fetches new data in constant intervals
-	for _ = range time.NewTicker(time.Second * 5).C {
-		if len(slave.DigitalInput) != 0 {
-			values := getModbusData(slave.DigitalInput, c.ReadDiscreteInputs, config.DigitalInput)
-			for i, v := range values {
-				modbusDigitalIn.WithLabelValues(
-					slave.Name,
-					slave.DigitalInput[i].Name,
-				).Set(v)
+	c := modbus.NewClient(hc.Handler)
+	var (
+		err          error
+		values       []float64
+		connIsClosed bool
+	)
+	for _ = range time.NewTicker(time.Second * 4).C {
+		switch {
+		case err == nil: // if the last query went ok
+			if len(slave.DigitalInput) != 0 {
+				values, err = getModbusData(slave.DigitalInput,
+					c.ReadDiscreteInputs, config.DigitalInput)
+				if err != nil {
+					glog.C <- fmt.Errorf("[%s:%s] %s",
+						slave.Name, config.DigitalInput.String(), err)
+				}
+				for i, v := range values {
+					modbusDigitalIn.WithLabelValues(
+						slave.Name,
+						slave.DigitalInput[i].Name,
+					).Set(v)
+				}
+
 			}
-		}
-		if len(slave.DigitalOutput) != 0 {
-			values := getModbusData(slave.DigitalOutput, c.ReadCoils, config.DigitalOutput)
-			for i, v := range values {
-				modbusDigitalOut.WithLabelValues(
-					slave.Name,
-					slave.DigitalOutput[i].Name,
-				).Set(v)
+			if len(slave.DigitalOutput) != 0 {
+				values, err = getModbusData(slave.DigitalOutput,
+					c.ReadCoils, config.DigitalOutput)
+				if err != nil {
+					glog.C <- fmt.Errorf("[%s:%s] %s",
+						slave.Name, config.DigitalOutput.String(), err)
+				}
+				for i, v := range values {
+					modbusDigitalOut.WithLabelValues(
+						slave.Name,
+						slave.DigitalOutput[i].Name,
+					).Set(v)
+				}
 			}
-		}
-		if len(slave.AnalogInput) != 0 {
-			values := getModbusData(slave.AnalogInput, c.ReadInputRegisters, config.AnalogInput)
-			for i, v := range values {
-				modbusAnalogIn.WithLabelValues(
-					slave.Name,
-					slave.AnalogInput[i].Name,
-				).Set(v)
+			if len(slave.AnalogInput) != 0 {
+				values, err = getModbusData(slave.AnalogInput,
+					c.ReadInputRegisters, config.AnalogInput)
+				if err != nil {
+					glog.C <- fmt.Errorf("[%s:%s] %s",
+						slave.Name, config.AnalogInput.String(), err)
+				}
+				for i, v := range values {
+					modbusAnalogIn.WithLabelValues(
+						slave.Name,
+						slave.AnalogInput[i].Name,
+					).Set(v)
+				}
 			}
-		}
-		if len(slave.AnalogOutput) != 0 {
-			values := getModbusData(slave.AnalogOutput, c.ReadHoldingRegisters, config.AnalogOutput)
-			for i, v := range values {
-				modbusAnalogOut.WithLabelValues(
-					slave.Name,
-					slave.AnalogOutput[i].Name,
-				).Set(v)
+
+			if len(slave.AnalogOutput) != 0 {
+				values, err = getModbusData(slave.AnalogOutput,
+					c.ReadHoldingRegisters, config.AnalogOutput)
+				if err != nil {
+					glog.C <- fmt.Errorf("[%s:%s] %s",
+						slave.Name, config.AnalogOutput.String(), err)
+				}
+				for i, v := range values {
+					modbusAnalogOut.WithLabelValues(
+						slave.Name,
+						slave.AnalogOutput[i].Name,
+					).Set(v)
+				}
+			}
+		case err != nil: // when we need to reconnect
+			if !connIsClosed {
+				hc.Close()
+				connIsClosed = true
+			}
+			err = hc.Connect()
+			if err == nil {
+				connIsClosed = false
 			}
 		}
 	}
@@ -120,7 +193,7 @@ func scrapeSlave(slave config.ParsedSlave, c modbus.Client) {
 type modbusFunc func(address, quantity uint16) ([]byte, error)
 
 // getModbusData returns the list of values from a slave
-func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) []float64 {
+func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) ([]float64, error) {
 	// results contains the values to be returned
 	results := make([]float64, 0, 125)
 	// temporal slice for every modbus query
@@ -146,20 +219,14 @@ func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) 
 		if it > 0 {
 			// query the maximum number of registers
 			modBytes, err = f(first, div)
-			if err != nil {
-				temp := make([]float64, div)
-				results = append(results, temp...)
-				continue
-			}
 			first += div
 		} else {
 			// query the last elements denoted by the incremented 'first' and the last
 			modBytes, err = f(first, (last-first)+1)
-			if err != nil {
-				temp := make([]float64, (last-first)+1)
-				results = append(results, temp...)
-				continue
-			}
+		}
+		if err != nil {
+			results = make([]float64, len(registers))
+			break
 		}
 		switch t {
 		case config.DigitalInput, config.DigitalOutput:
@@ -180,5 +247,5 @@ func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) 
 			}
 		}
 	}
-	return results
+	return results, err
 }
