@@ -34,15 +34,6 @@ Help on flags:
 
 Check the `examples/` folder to read the information about the configuration file and some examples.
 
-## General information
-- Default values:
-    + listen address: `:9010`
-    + Baud rate: `19200`
-    + Data bits:  `8`
-    + Stop bits: `1`
-    + Parity: `E`
-- The use of no parity requires 2 stop bits.
-
 ## TODO
 - General clean up
 - Tons of test coverage
