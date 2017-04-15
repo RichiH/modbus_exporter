@@ -49,12 +49,17 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 				handler.Timeout = time.Duration(conf[slave.Name].Timeout) * time.Millisecond
 			}
 			handler.SlaveId = conf[slave.Name].ID
-			if err := handler.Connect(); err != nil {
-				return fmt.Errorf("unable to connect with slave %s at %s",
-					slave.Name, conf[slave.Name].Port)
+			if conf[slave.Name].KeepAlive {
+				if err := handler.Connect(); err != nil {
+					return fmt.Errorf("unable to connect with slave %s at %s",
+						slave.Name, conf[slave.Name].Port)
+				}
 			}
 			// starts the data scrapping routine
-			go scrapeSlave(slave, Handler{handler})
+			go scrapeSlave(slave, &Handler{
+				Type:      config.IP,
+				KeepAlive: conf[slave.Name].KeepAlive,
+				Handler:   handler})
 		case config.Serial:
 			handler := modbus.NewRTUClientHandler(conf[slave.Name].Port)
 			// diable logger
@@ -81,7 +86,10 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 					slave.Name, conf[slave.Name].Port)
 			}
 			// starts the data scrapping routine
-			go scrapeSlave(slave, Handler{handler})
+			go scrapeSlave(slave, &Handler{
+				Type:      config.Serial,
+				KeepAlive: false,
+				Handler:   handler})
 		}
 	}
 	return nil
@@ -90,7 +98,9 @@ func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
 // Handler is an API helper to manage a modbus handler
 type Handler struct {
 	//Handler         modbus.ClientHandler
-	Handler interface {
+	Type      config.PortType
+	KeepAlive bool
+	Handler   interface {
 		modbus.ClientHandler
 		Connect() error
 		Close() error
@@ -107,7 +117,7 @@ func (hc *Handler) Close() error {
 	return hc.Handler.Close()
 }
 
-func scrapeSlave(slave config.ParsedSlave, hc Handler) { //c modbus.Client) {
+func scrapeSlave(slave config.ParsedSlave, hc *Handler) { //c modbus.Client) {
 	// fetches new data in constant intervals
 	c := modbus.NewClient(hc.Handler)
 	var (
@@ -115,9 +125,10 @@ func scrapeSlave(slave config.ParsedSlave, hc Handler) { //c modbus.Client) {
 		values       []float64
 		connIsClosed bool
 	)
-	for _ = range time.NewTicker(time.Second * 4).C {
+	for _ = range time.NewTicker(time.Second * 10).C {
 		switch {
-		case err == nil: // if the last query went ok
+		// if the last query went ok
+		case err == nil || (!hc.KeepAlive && hc.Type == config.IP):
 			if len(slave.DigitalInput) != 0 {
 				values, err = getModbusData(slave.DigitalInput,
 					c.ReadDiscreteInputs, config.DigitalInput)
@@ -176,7 +187,15 @@ func scrapeSlave(slave config.ParsedSlave, hc Handler) { //c modbus.Client) {
 					).Set(v)
 				}
 			}
-		case err != nil: // when we need to reconnect
+			// in case of non failure evades the fallthrough which starts a reconnection
+			if !(err != nil &&
+				(hc.Type == config.Serial || (hc.KeepAlive && hc.Type == config.IP))) {
+				continue
+			}
+			fallthrough
+		// when we need to reconnect
+		case err != nil &&
+			(hc.Type == config.Serial || (hc.KeepAlive && hc.Type == config.IP)):
 			if !connIsClosed {
 				hc.Close()
 				connIsClosed = true

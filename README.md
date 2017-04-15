@@ -1,7 +1,5 @@
 # Modbus exporter
-Exporter which retrieves stats from a modbus system and exports them via HTTP for Prometheus consumption.
-
-**DO NOT USE THIS EXPORTER (NOT YET), IT REQUIRES MORE WORK IN ORDER TO BE RELIABLE.**
+Fault tolerant exporter which retrieves stats from a modbus system and exports them via HTTP for Prometheus consumption.
 
 ## Building
 you just need Go installed, simply run hte build in the directory as:
@@ -37,4 +35,4 @@ Check the `examples/` folder to read the information about the configuration fil
 ## TODO
 - General clean up
 - Tons of test coverage
-- Tons of testing with real slaves
+- Improve global log system

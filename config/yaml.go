@@ -43,6 +43,7 @@ type Slave struct {
 	Databits      int      `yaml:"databits"`
 	Stopbits      int      `yaml:"stopbits"`
 	Parity        string   `yaml:"parity"`
+	KeepAlive     bool     `yaml:"keepAlive"`
 	DigitalInput  []string `yaml:"digitalIn"`
 	DigitalOutput []string `yaml:"digitalOut"`
 	AnalogInput   []string `yaml:"analogIn"`

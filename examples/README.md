@@ -10,6 +10,7 @@ The format of the file is yaml so you can apply its rules when writing the file.
 
 ### TCP/IP
 - port: you have to define a valid IP address. e.g. `"localhost:8080"` or `"192.168.0.192:9090"`.
+- keepAlive: if the slave handles a keep alive connection. Boolean `true` or `false`. Default value = `false`
 
 ### Serial
 - port: you have to define a valid port. e.g. `"/dev/ttyUSB0"`.
@@ -21,7 +22,7 @@ The format of the file is yaml so you can apply its rules when writing the file.
 ## Register Definition
 Every register must be defined by its type, you can group them as `analogOut`, `analogIn`, `digitalIn` and `digitalOut`.
 There are 2 ways to define the registers to be processed.
-- Enumeration: coma separated registers of the slaves, it can be a single name. e.g. `53, 101, 102, 154` or `34` 
+- Enumeration: coma separated registers of the slaves, it can be a single name. e.g. `53, 101, 102, 154` or `34`
 - Range: a register value and a higher one separated by a colon, it defines the whole range of register (it is inclusive). e.g. `20:25`, that would be translated to `20,21,22,23,24,25`.
 
 General example:
@@ -46,7 +47,7 @@ If you want to define a specific name you have to assign it with the `=` operato
 
 The name definition is done by coma separated values and they are assigned one by one to the registers, you can define less names than registers but not the opposite. That is valid for enumerated and range registers.
 
-e.g. 
+e.g.
 ```yml
 - 53, 101, 102, 154 = tempSensor, Humidity, lightSensor
 ```
@@ -65,7 +66,7 @@ Or to generate alternate sequences:
 in this one we'd have `53=typeA`, `101=typeB`, `102=typeA` and `154=typeB`.
 
 ### Enumeration
-The symbol `$` at the end of a name assigns an index it. The first unique number with enumerator will be named with a 0. As the parser finds more identical names with the enumerator, it adds that number incremented by 1 with respect to the previous. 
+The symbol `$` at the end of a name assigns an index it. The first unique number with enumerator will be named with a 0. As the parser finds more identical names with the enumerator, it adds that number incremented by 1 with respect to the previous.
 `sensorA$, sensorA$` would be translated to `sensorA1, sensorA2`.
 
 The enumeration can be combined with the ellipsis in a very practical way:
