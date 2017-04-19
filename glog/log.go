@@ -18,28 +18,36 @@
 // Package glog manages the global loging from every modbus query
 package glog
 
-import "github.com/prometheus/common/log"
+import (
+	"time"
+
+	"github.com/lupoDharkael/modbus_exporter/config"
+	"github.com/prometheus/common/log"
+)
 
 // C is the channel exported by the global logging, the external packages have
 // to send the errors here.
 var C chan<- error
 
-var trackLogs map[string]bool
+var trackLogs map[string]time.Time
 
 func init() {
-	trackLogs = make(map[string]bool)
+	trackLogs = make(map[string]time.Time)
 	go processLogs()
 }
 
 func processLogs() {
 	ch := make(chan error, 20)
 	C = ch
+	var t time.Time
+	var ok bool
 	for err := range ch {
-		// if the error has not been logged it shows it one time.
-		// (this will change in the future with filtered errors in time intervals)
-		if ok := trackLogs[err.Error()]; !ok {
+		t, ok = trackLogs[err.Error()]
+		// logs the error if it has not been logged yet or
+		// if the error didn't happen in the last query of slaves.
+		if !ok || !(time.Since(t) < config.ScrapeInterval*2) {
 			log.Errorln(err)
-			trackLogs[err.Error()] = true
 		}
+		trackLogs[err.Error()] = time.Now()
 	}
 }

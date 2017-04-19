@@ -125,7 +125,7 @@ func scrapeSlave(slave config.ParsedSlave, hc *Handler) { //c modbus.Client) {
 		values       []float64
 		connIsClosed bool
 	)
-	for _ = range time.NewTicker(time.Second * 10).C {
+	for _ = range time.NewTicker(config.ScrapeInterval).C {
 		switch {
 		// if the last query went ok
 		case err == nil || (!hc.KeepAlive && hc.Type == config.IP):

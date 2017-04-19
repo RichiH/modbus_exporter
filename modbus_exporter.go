@@ -20,6 +20,7 @@ package main
 import (
 	"flag"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -35,10 +36,14 @@ var (
 		"The address to listen on for HTTP requests.")
 	configFile = flag.String("config.file", "slaves.yml",
 		"Sets the configuration file.")
+	scrapeInterval = flag.Duration("scrape-interval", 8,
+		"Sets scrape interval in seconds.")
 )
 
 func main() {
 	flag.Parse()
+	config.ScrapeInterval = time.Second * (*scrapeInterval)
+
 	slavesFile, err := config.LoadSlaves(*configFile)
 	if err != nil {
 		log.Fatalln(err)
