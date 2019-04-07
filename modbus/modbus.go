@@ -215,8 +215,6 @@ type modbusFunc func(address, quantity uint16) ([]byte, error)
 func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) ([]float64, error) {
 	// results contains the values to be returned
 	results := make([]float64, 0, 125)
-	// temporal slice for every modbus query
-	var modBytes []byte
 	// saves first and last register value to be obtained
 	first := registers[0].Value
 	last := registers[len(registers)-1].Value
@@ -235,6 +233,11 @@ func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) 
 		div = 125 // max registers for an analog query
 	}
 	for it := int(rangeN / div); it >= 0; it-- {
+		// Temporal slice for every modbus query.
+		modBytes := []byte{}
+		// The number of the first register loaded into `modBytes`.
+		modBytesFirstRegister := first
+
 		if it > 0 {
 			// query the maximum number of registers
 			modBytes, err = f(first, div)
@@ -243,22 +246,29 @@ func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) 
 			// query the last elements denoted by the incremented 'first' and the last
 			modBytes, err = f(first, (last-first)+1)
 		}
+
 		if err != nil {
 			results = make([]float64, len(registers))
 			break
 		}
-		switch t {
-		case config.DigitalInput, config.DigitalOutput:
-			for i := 0; i < int(rangeN); i++ {
-				if registers[0].Value+uint16(i) == registers[regIndex].Value {
+
+		// i < int(div-1) make sure not to try to access anything outside
+		// the maximum length of digital or analog return.
+		for i := 0; i < int(rangeN) && i < int(div-1); i++ {
+			// Check if we are already done.
+			if regIndex >= len(registers) {
+				break
+			}
+
+			switch t {
+			case config.DigitalInput, config.DigitalOutput:
+				if modBytesFirstRegister+uint16(i) == registers[regIndex].Value {
 					data := float64((modBytes[i/8] >> uint16(i) % 8) & 1)
 					results = append(results, data)
 					regIndex++
 				}
-			}
-		case config.AnalogInput, config.AnalogOutput:
-			for i := 0; i < int(rangeN); i++ {
-				if registers[0].Value+uint16(i) == registers[regIndex].Value {
+			case config.AnalogInput, config.AnalogOutput:
+				if modBytesFirstRegister+uint16(i) == registers[regIndex].Value {
 					data := float64(modBytes[i*2])*256 + float64(modBytes[(i*2)+1])
 					results = append(results, data)
 					regIndex++
