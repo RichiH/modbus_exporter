@@ -27,6 +27,8 @@ github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 # github.com/prometheus/procfs v0.0.0-20170216223256-a1dba9ce8bae
 github.com/prometheus/procfs
 github.com/prometheus/procfs/xfs
+# github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
+github.com/tbrandon/mbserver
 # golang.org/x/sys v0.0.0-20190412213103-97732733099d
 golang.org/x/sys/windows/svc/eventlog
 golang.org/x/sys/unix

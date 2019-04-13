@@ -1,0 +1,5 @@
+simulator:
+        port: 127.0.0.1:1502
+        id: 1
+        analogIn:
+                - '22 = register_twenty_two'

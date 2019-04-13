@@ -17,6 +17,7 @@ require (
 	github.com/prometheus/common v0.0.0-20170220103846-49fee292b27b
 	github.com/prometheus/procfs v0.0.0-20170216223256-a1dba9ce8bae // indirect
 	github.com/stretchr/testify v1.3.0 // indirect
+	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	golang.org/x/sync v0.0.0-20190412183630-56d357773e84 // indirect
 	golang.org/x/sys v0.0.0-20190412213103-97732733099d // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
