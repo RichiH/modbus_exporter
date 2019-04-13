@@ -1,5 +1,15 @@
 language: go
 
+go:
+        - 1.12.x
+
+env:
+        - GO111MODULE=on
+
 script:
+        # Make sure /vendor is in sync.
+        - go mod tidy && go mod vendor && git diff --exit-code
+
         - go install
+
         - go test ./...
