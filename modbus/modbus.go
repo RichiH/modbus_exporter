@@ -35,55 +35,55 @@ func init() {
 
 // RegisterData receives the data of the modbus systems and start querying the
 // modbus slaves in regular intervals in order to expose the data to prometheus
-func RegisterData(slaves []config.ParsedSlave, conf config.ListSlaves) error {
-	for _, slave := range slaves {
+func RegisterData(conf config.Config) error {
+	for _, slave := range conf.Targets {
 		//var client modbus.Client
 		// creates the client (TCP-IP or Serial)
-		switch config.CheckPortSlave(conf[slave.Name]) {
+		switch config.CheckPortTarget(slave) {
 		case config.IP:
-			handler := modbus.NewTCPClientHandler(conf[slave.Name].Port)
+			handler := modbus.NewTCPClientHandler(slave.Port)
 			// diable logger
 			handler.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
 			//handler.Logger.SetFlags(0)
-			if conf[slave.Name].Timeout != 0 {
-				handler.Timeout = time.Duration(conf[slave.Name].Timeout) * time.Millisecond
+			if slave.Timeout != 0 {
+				handler.Timeout = time.Duration(slave.Timeout) * time.Millisecond
 			}
-			handler.SlaveId = conf[slave.Name].ID
-			if conf[slave.Name].KeepAlive {
+			handler.SlaveId = slave.ID
+			if slave.KeepAlive {
 				if err := handler.Connect(); err != nil {
 					return fmt.Errorf("unable to connect with slave %s at %s",
-						slave.Name, conf[slave.Name].Port)
+						slave.Name, slave.Port)
 				}
 			}
 			// starts the data scrapping routine
 			go scrapeSlave(slave, &Handler{
 				Type:      config.IP,
-				KeepAlive: conf[slave.Name].KeepAlive,
+				KeepAlive: slave.KeepAlive,
 				Handler:   handler})
 		case config.Serial:
-			handler := modbus.NewRTUClientHandler(conf[slave.Name].Port)
+			handler := modbus.NewRTUClientHandler(slave.Port)
 			// diable logger
 			handler.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
 			//handler.Logger.SetFlags(0)
-			if conf[slave.Name].Baudrate != 0 {
-				handler.BaudRate = conf[slave.Name].Baudrate
+			if slave.Baudrate != 0 {
+				handler.BaudRate = slave.Baudrate
 			}
-			if conf[slave.Name].Databits != 0 {
-				handler.DataBits = conf[slave.Name].Databits
+			if slave.Databits != 0 {
+				handler.DataBits = slave.Databits
 			}
-			if conf[slave.Name].Parity != "" {
-				handler.Parity = conf[slave.Name].Parity
+			if slave.Parity != "" {
+				handler.Parity = slave.Parity
 			}
-			if conf[slave.Name].Stopbits != 0 {
-				handler.StopBits = conf[slave.Name].Stopbits
+			if slave.Stopbits != 0 {
+				handler.StopBits = slave.Stopbits
 			}
-			if conf[slave.Name].Timeout != 0 {
-				handler.Timeout = time.Duration(conf[slave.Name].Timeout) * time.Millisecond
+			if slave.Timeout != 0 {
+				handler.Timeout = time.Duration(slave.Timeout) * time.Millisecond
 			}
-			handler.SlaveId = conf[slave.Name].ID
+			handler.SlaveId = slave.ID
 			if err := handler.Connect(); err != nil {
 				return fmt.Errorf("unable to connect with slave %s at %s",
-					slave.Name, conf[slave.Name].Port)
+					slave.Name, slave.Port)
 			}
 			// starts the data scrapping routine
 			go scrapeSlave(slave, &Handler{
@@ -117,7 +117,7 @@ func (hc *Handler) Close() error {
 	return hc.Handler.Close()
 }
 
-func scrapeSlave(slave config.ParsedSlave, hc *Handler) { //c modbus.Client) {
+func scrapeSlave(slave config.Target, hc *Handler) { //c modbus.Client) {
 	// fetches new data in constant intervals
 	c := modbus.NewClient(hc.Handler)
 	var (
@@ -212,12 +212,24 @@ func scrapeSlave(slave config.ParsedSlave, hc *Handler) { //c modbus.Client) {
 type modbusFunc func(address, quantity uint16) ([]byte, error)
 
 // getModbusData returns the list of values from a slave
-func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) ([]float64, error) {
+// TODO: rename registers to definitions.
+func getModbusData(registers []config.MetricDef, f modbusFunc, t config.RegType) ([]float64, error) {
+	if len(registers) == 0 {
+		return []float64{}, nil
+	}
+
 	// results contains the values to be returned
 	results := make([]float64, 0, 125)
+
 	// saves first and last register value to be obtained
 	first := registers[0].Address
-	last := registers[len(registers)-1].Address
+	var last config.RegisterAddr
+	for _, def := range registers {
+		if def.Address > last {
+			last = def.Address
+		}
+	}
+
 	// error needed to evade the
 	var err error
 	// tracking of the actual index in the registers received as parameter
@@ -232,7 +244,7 @@ func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) 
 	case config.AnalogInput, config.AnalogOutput:
 		div = 125 // max registers for an analog query
 	}
-	for it := int(rangeN / div); it >= 0; it-- {
+	for it := int(uint16(rangeN) / div); it >= 0; it-- {
 		// Temporal slice for every modbus query.
 		modBytes := []byte{}
 		// The number of the first register loaded into `modBytes`.
@@ -240,11 +252,11 @@ func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) 
 
 		if it > 0 {
 			// query the maximum number of registers
-			modBytes, err = f(first, div)
-			first += div
+			modBytes, err = f(uint16(first), div)
+			first += config.RegisterAddr(div)
 		} else {
 			// query the last elements denoted by the incremented 'first' and the last
-			modBytes, err = f(first, (last-first)+1)
+			modBytes, err = f(uint16(first), uint16(last-first)+1)
 		}
 
 		if err != nil {
@@ -262,14 +274,17 @@ func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) 
 
 			switch t {
 			case config.DigitalInput, config.DigitalOutput:
-				if modBytesFirstRegister+uint16(i) == registers[regIndex].Address {
+				if modBytesFirstRegister+config.RegisterAddr(i) == registers[regIndex].Address {
 					data := float64((modBytes[i/8] >> uint16(i) % 8) & 1)
 					results = append(results, data)
 					regIndex++
 				}
 			case config.AnalogInput, config.AnalogOutput:
-				if modBytesFirstRegister+uint16(i) == registers[regIndex].Address {
-					data := float64(modBytes[i*2])*256 + float64(modBytes[(i*2)+1])
+				if modBytesFirstRegister+config.RegisterAddr(i) == registers[regIndex].Address {
+					data, err := registers[regIndex].DataType.Parse([2]byte{modBytes[i*2], modBytes[(i*2)+1]})
+					if err != nil {
+						return []float64{}, err
+					}
 					results = append(results, data)
 					regIndex++
 				}

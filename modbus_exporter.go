@@ -27,7 +27,6 @@ import (
 	"github.com/prometheus/common/log"
 
 	"github.com/lupoDharkael/modbus_exporter/modbus"
-	"github.com/lupoDharkael/modbus_exporter/parser"
 
 	"github.com/lupoDharkael/modbus_exporter/config"
 )
@@ -55,16 +54,19 @@ func main() {
 	modbus.RegisterMetrics(modbusRegistry)
 
 	log.Infoln("Loading configuration file", *configFile)
-	slavesFile, err := config.LoadSlaves(*configFile)
+	config, err := config.LoadConfig(*configFile)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	parsedSlaves, err := parser.ParseSlaves(slavesFile)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	err = modbus.RegisterData(parsedSlaves, slavesFile)
+	log.Info(config)
+
+	// TODO: Might be worth reusing some of the validation of ParseSlaves.
+	// parsedSlaves, err := parser.ParseSlaves(slavesFile)
+	// if err != nil {
+	// 	log.Fatalln(err)
+	// }
+	err = modbus.RegisterData(config)
 	if err != nil {
 		log.Fatalln(err)
 	}

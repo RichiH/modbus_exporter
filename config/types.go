@@ -45,18 +45,3 @@ func (r RegType) String() string {
 	}
 	return s
 }
-
-// ParsedSlave contains all the I/O registers of one slave
-type ParsedSlave struct {
-	Name          string
-	DigitalInput  []Register
-	DigitalOutput []Register
-	AnalogInput   []Register
-	AnalogOutput  []Register
-}
-
-// Register is the representation of a single register
-type Register struct {
-	Name    string
-	Address uint16
-}
