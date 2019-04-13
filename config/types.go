@@ -57,6 +57,6 @@ type ParsedSlave struct {
 
 // Register is the representation of a single register
 type Register struct {
-	Name  string
-	Value uint16
+	Name    string
+	Address uint16
 }

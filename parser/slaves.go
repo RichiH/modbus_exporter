@@ -173,19 +173,19 @@ func (p *SlaveParser) parseRegisters(regDefList []string) (regsList []config.Reg
 				if name.numeration {
 					name.content = p.enumeratedName(name.content)
 				}
-				newReg := config.Register{Name: name.content, Value: parseHelper.regs[i]}
+				newReg := config.Register{Name: name.content, Address: parseHelper.regs[i]}
 				regsList = append(regsList, newReg)
 				// automatic naming when no names left but we find more registers
 			} else {
 				genName := autonaming(p.context.kind, parseHelper.regs[i])
-				newReg := config.Register{Name: genName, Value: parseHelper.regs[i]}
+				newReg := config.Register{Name: genName, Address: parseHelper.regs[i]}
 				regsList = append(regsList, newReg)
 			}
 		}
 	}
 	// order by register value
 	sort.Slice(regsList, func(i int, j int) bool {
-		return regsList[i].Value < regsList[j].Value
+		return regsList[i].Address < regsList[j].Address
 	})
 	return
 }

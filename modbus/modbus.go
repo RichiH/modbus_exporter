@@ -216,8 +216,8 @@ func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) 
 	// results contains the values to be returned
 	results := make([]float64, 0, 125)
 	// saves first and last register value to be obtained
-	first := registers[0].Value
-	last := registers[len(registers)-1].Value
+	first := registers[0].Address
+	last := registers[len(registers)-1].Address
 	// error needed to evade the
 	var err error
 	// tracking of the actual index in the registers received as parameter
@@ -262,13 +262,13 @@ func getModbusData(registers []config.Register, f modbusFunc, t config.RegType) 
 
 			switch t {
 			case config.DigitalInput, config.DigitalOutput:
-				if modBytesFirstRegister+uint16(i) == registers[regIndex].Value {
+				if modBytesFirstRegister+uint16(i) == registers[regIndex].Address {
 					data := float64((modBytes[i/8] >> uint16(i) % 8) & 1)
 					results = append(results, data)
 					regIndex++
 				}
 			case config.AnalogInput, config.AnalogOutput:
-				if modBytesFirstRegister+uint16(i) == registers[regIndex].Value {
+				if modBytesFirstRegister+uint16(i) == registers[regIndex].Address {
 					data := float64(modBytes[i*2])*256 + float64(modBytes[(i*2)+1])
 					results = append(results, data)
 					regIndex++

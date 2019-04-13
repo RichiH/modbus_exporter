@@ -19,8 +19,8 @@ func TestGetModbusData(t *testing.T) {
 			name: "basic analog input, single register",
 			registers: []config.Register{
 				{
-					Name:  "xyz",
-					Value: 22,
+					Name:    "xyz",
+					Address: 22,
 				},
 			},
 			registerData: func() []byte {
@@ -41,12 +41,12 @@ func TestGetModbusData(t *testing.T) {
 			name: "analog output, double register, more than 125 (max. analog return length) apart",
 			registers: []config.Register{
 				{
-					Name:  "xyz",
-					Value: 2,
+					Name:    "xyz",
+					Address: 2,
 				},
 				{
-					Name:  "xyz",
-					Value: 299,
+					Name:    "xyz",
+					Address: 299,
 				},
 			},
 			registerData: func() []byte {
