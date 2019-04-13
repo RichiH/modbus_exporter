@@ -67,9 +67,6 @@ var (
 	regDefTest = []string{"34 = test"}
 	slavesGood = [...]Slave{
 		Slave{Port: "localhost:8080", DigitalOutput: regDefTest},
-		Slave{Port: "localhost:8080", Parity: "N", Stopbits: 2, DigitalOutput: regDefTest},
-		Slave{Port: "localhost:8080", Parity: "O", Stopbits: 1, Databits: 7, DigitalOutput: regDefTest},
-		Slave{Port: "localhost:8080", Baudrate: 9600, DigitalOutput: regDefTest},
 	}
 )
 

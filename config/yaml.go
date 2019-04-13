@@ -176,7 +176,7 @@ func ValidateSlave(s *Slave, alias string) error {
 	// checking the absence of specific parameters for a serial connection
 	case IP:
 		if s.Parity != "" || s.Stopbits != 0 || s.Databits != 0 || s.Baudrate != 0 {
-			newErr := fmt.Errorf("invalid argument in slave %s, TCP slaves desn't"+
+			newErr := fmt.Errorf("invalid argument in slave %s, TCP slaves don't"+
 				"use Parity, Stopbits, Databits or Baudrate.", alias)
 			err = multierror.Append(err, newErr)
 		}
