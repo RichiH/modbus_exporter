@@ -15,7 +15,7 @@ To run it:
 ./modbus_exporter [flags]
 ```
 
-The configuration will be taken from a configuration file, the exporter will search a fille called `slaves.yml` in the same directory by default.
+The configuration will be taken from a configuration file, the exporter will search a fille called `modbus.yml` in the same directory by default.
 
 Setting a different file and a different listen address:
 ```bash

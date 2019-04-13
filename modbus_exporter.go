@@ -34,7 +34,7 @@ import (
 var (
 	listenAddress = flag.String("listen-address", ":9010",
 		"The address to listen on for HTTP requests.")
-	configFile = flag.String("config.file", "slaves.yml",
+	configFile = flag.String("config.file", "modbus.yml",
 		"Sets the configuration file.")
 	scrapeInterval = flag.Duration("scrape-interval", 8,
 		"Sets scrape interval in seconds.")
