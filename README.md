@@ -19,7 +19,7 @@ The configuration will be taken from a configuration file, the exporter will sea
 
 Setting a different file and a different listen address:
 ```bash
-./modbus_exporter -config.file="path/to/file" -listen-address=":8080"
+./modbus_exporter -config.file="path/to/file" -modbus-listen-address=":8080"
 ```
 
 Help on flags:

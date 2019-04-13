@@ -52,9 +52,10 @@ var (
 	)
 )
 
-func init() {
-	prometheus.MustRegister(modbusDigitalIn)
-	prometheus.MustRegister(modbusDigitalOut)
-	prometheus.MustRegister(modbusAnalogIn)
-	prometheus.MustRegister(modbusAnalogOut)
+// RegisterMetrics registers modbus specific metrics at the given registerer.
+func RegisterMetrics(r prometheus.Registerer) {
+	r.MustRegister(modbusDigitalIn)
+	r.MustRegister(modbusDigitalOut)
+	r.MustRegister(modbusAnalogIn)
+	r.MustRegister(modbusAnalogOut)
 }

@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 
@@ -32,8 +33,10 @@ import (
 )
 
 var (
-	listenAddress = flag.String("listen-address", ":9010",
-		"The address to listen on for HTTP requests.")
+	modbusAddress = flag.String("modbus-listen-address", ":9010",
+		"The address to listen on for HTTP requests exposing modbus metrics.")
+	telemetryAddress = flag.String("telemetry-listen-address", ":9011",
+		"The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself.")
 	configFile = flag.String("config.file", "modbus.yml",
 		"Sets the configuration file.")
 	scrapeInterval = flag.Duration("scrape-interval", 8,
@@ -44,11 +47,19 @@ func main() {
 	flag.Parse()
 	config.ScrapeInterval = time.Second * (*scrapeInterval)
 
+	telemetryRegistry := prometheus.NewRegistry()
+	telemetryRegistry.MustRegister(prometheus.NewGoCollector())
+	telemetryRegistry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+
+	modbusRegistry := prometheus.NewRegistry()
+	modbus.RegisterMetrics(modbusRegistry)
+
+	log.Infoln("Loading configuration file", *configFile)
 	slavesFile, err := config.LoadSlaves(*configFile)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Infoln("Loading configuration file", *configFile)
+
 	parsedSlaves, err := parser.ParseSlaves(slavesFile)
 	if err != nil {
 		log.Fatalln(err)
@@ -57,10 +68,16 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	// Expose the registered metrics via HTTP.
-	http.Handle("/metrics", promhttp.Handler())
 
-	log.Infoln("Listening on ", *listenAddress)
-	log.Fatalln(http.ListenAndServe(*listenAddress, nil))
+	log.Infoln("Telemetry metrics at: " + *telemetryAddress)
+	go func() {
+		log.Fatal(
+			http.ListenAndServe(*telemetryAddress, promhttp.HandlerFor(telemetryRegistry, promhttp.HandlerOpts{})),
+		)
+	}()
 
+	log.Infoln("Modbus metrics at: " + *modbusAddress)
+	log.Fatal(
+		http.ListenAndServe(*modbusAddress, promhttp.HandlerFor(modbusRegistry, promhttp.HandlerOpts{})),
+	)
 }
