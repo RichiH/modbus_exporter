@@ -95,12 +95,12 @@ func (t *ModbusDataType) validate() error {
 //
 // TODO: Does this belong here?
 // TODO: Handle Endianness.
-func (t *ModbusDataType) Parse(rawData [2]byte) (float64, error) {
-	if t == nil {
-		return 0, fmt.Errorf("expected Modbus data type not to be nil")
+func (d *MetricDef) Parse(rawData [2]byte) (float64, error) {
+	if d == nil {
+		return 0, fmt.Errorf("expected metric definition not to be nil")
 	}
 
-	switch *t {
+	switch d.DataType {
 	case ModbusFloat16:
 		panic("implement")
 	case ModbusInt16:
@@ -114,7 +114,18 @@ func (t *ModbusDataType) Parse(rawData [2]byte) (float64, error) {
 			return float64(i), nil
 		}
 	case ModbusBool:
-		panic("implement")
+		{
+			if d.BitOffset == nil {
+				return float64(0), fmt.Errorf("expected bit position on boolean data type")
+			}
+
+			data := binary.BigEndian.Uint16(rawData[:])
+
+			if data&uint16(uint16(1)<<uint16(*d.BitOffset)) > 0 {
+				return float64(1), nil
+			}
+			return float64(0), nil
+		}
 	}
 
 	return 0, fmt.Errorf("failed to parse Modbus data type")
@@ -144,12 +155,21 @@ type MetricDef struct {
 	Index int8 `yaml:"index"`
 
 	DataType ModbusDataType `yaml:"dataType"`
+	// Bit offset within the input register to parse. Only valid for boolean data
+	// type. The two bytes of a register are interpreted in network order (big
+	// endianness). Boolean is determined via `register&(1<<offset)>0`.
+	BitOffset *int `yaml:"bitOffset,omitempty"`
 }
 
 // Validate semantically validates the given metric definition.
 func (d *MetricDef) validate() error {
 	if err := d.DataType.validate(); err != nil {
 		return fmt.Errorf("invalid metric definition %v: %v", d.Name, err)
+	}
+
+	// TODO: Does it have to be used with bools though? Or should there be a default?
+	if d.BitOffset != nil && d.DataType != ModbusBool {
+		return fmt.Errorf("bitPosition can only be used with boolean data type")
 	}
 
 	return nil

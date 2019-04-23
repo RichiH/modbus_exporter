@@ -275,13 +275,14 @@ func getModbusData(registers []config.MetricDef, f modbusFunc, t config.RegType)
 			switch t {
 			case config.DigitalInput, config.DigitalOutput:
 				if modBytesFirstRegister+config.RegisterAddr(i) == registers[regIndex].Address {
+					// TODO: Use metric definition parse.
 					data := float64((modBytes[i/8] >> uint16(i) % 8) & 1)
 					results = append(results, data)
 					regIndex++
 				}
 			case config.AnalogInput, config.AnalogOutput:
 				if modBytesFirstRegister+config.RegisterAddr(i) == registers[regIndex].Address {
-					data, err := registers[regIndex].DataType.Parse([2]byte{modBytes[i*2], modBytes[(i*2)+1]})
+					data, err := registers[regIndex].Parse([2]byte{modBytes[i*2], modBytes[(i*2)+1]})
 					if err != nil {
 						return []float64{}, err
 					}
