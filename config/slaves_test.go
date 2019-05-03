@@ -45,10 +45,10 @@ var (
 )
 
 func TestCheckPort(t *testing.T) {
-	s := new(Slave)
+	s := new(Target)
 	for i, v := range valuesTest {
 		s.Port = v
-		pType := CheckPortSlave(s)
+		pType := CheckPortTarget(*s)
 		if expectedTest[i] != pType {
 			t.Errorf("at port %s, expected %s, got %s.", v, expectedTest[i], pType)
 		}
@@ -56,29 +56,35 @@ func TestCheckPort(t *testing.T) {
 }
 
 var (
-	slavesBad = [...]Slave{
-		Slave{Port: "localhost:8080", Parity: "abc"},
-		Slave{Port: "localhost:8080", Parity: "N"},
-		Slave{Port: "localhost:8080", Stopbits: 4},
-		Slave{Port: "localhost:8080", Baudrate: -1},
-		Slave{Port: "localhost:8080", Databits: 50},
-		Slave{Port: "localhost:8080", Baudrate: -1},
+	slavesBad = [...]Target{
+		Target{Port: "localhost:8080", Parity: "abc"},
+		Target{Port: "localhost:8080", Parity: "N"},
+		Target{Port: "localhost:8080", Stopbits: 4},
+		Target{Port: "localhost:8080", Baudrate: -1},
+		Target{Port: "localhost:8080", Databits: 50},
+		Target{Port: "localhost:8080", Baudrate: -1},
 	}
-	regDefTest = []string{"34 = test"}
-	slavesGood = [...]Slave{
-		Slave{Port: "localhost:8080", DigitalOutput: regDefTest},
+	regDefTest = []MetricDef{
+		{
+			Name:     "test",
+			Address:  34,
+			DataType: "int16",
+		},
+	}
+	slavesGood = [...]Target{
+		Target{Port: "localhost:8080", DigitalOutput: regDefTest},
 	}
 )
 
 func TestValidate(t *testing.T) {
 	for _, s := range slavesGood {
-		if err := ValidateSlave(&s, "TestedSlave"); err != nil {
+		if err := s.validate(); err != nil {
 			t.Errorf("validation of %v expected to pass but received the error:\n"+
 				"%s", s.PrettyString(), err)
 		}
 	}
 	for _, s := range slavesBad {
-		if err := ValidateSlave(&s, "TestedSlave"); err == nil {
+		if err := s.validate(); err == nil {
 			t.Errorf("validation of %v expected to fail but it didn't.",
 				s.PrettyString())
 		}
@@ -86,7 +92,7 @@ func TestValidate(t *testing.T) {
 }
 
 func BenchmarkPrettyPrint(b *testing.B) {
-	s := Slave{Port: "localhost:8080", Parity: "O", Stopbits: 1, Databits: 7}
+	s := Target{Port: "localhost:8080", Parity: "O", Stopbits: 1, Databits: 7}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		s.PrettyString()

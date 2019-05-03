@@ -10,17 +10,18 @@ import (
 func TestGetModbusData(t *testing.T) {
 	tests := []struct {
 		name         string
-		registers    []config.Register
+		registers    []config.MetricDef
 		registerData func() []byte
 		registerType config.RegType
 		expect       []float64
 	}{
 		{
 			name: "basic analog input, single register",
-			registers: []config.Register{
+			registers: []config.MetricDef{
 				{
-					Name:    "xyz",
-					Address: 22,
+					Name:     "xyz",
+					Address:  22,
+					DataType: "uint16",
 				},
 			},
 			registerData: func() []byte {
@@ -39,14 +40,16 @@ func TestGetModbusData(t *testing.T) {
 
 		{
 			name: "analog output, double register, more than 125 (max. analog return length) apart",
-			registers: []config.Register{
+			registers: []config.MetricDef{
 				{
-					Name:    "xyz",
-					Address: 2,
+					Name:     "xyz",
+					Address:  2,
+					DataType: "uint16",
 				},
 				{
-					Name:    "xyz",
-					Address: 299,
+					Name:     "xyz",
+					Address:  299,
+					DataType: "uint16",
 				},
 			},
 			registerData: func() []byte {

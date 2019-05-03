@@ -24,12 +24,23 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// LoadSlaves unmarshals the slaves configuration file.
-func LoadSlaves(pathToSlaves string) (ListSlaves, error) {
-	ls := make(ListSlaves)
+// LoadConfig unmarshals the slaves configuration file.
+func LoadConfig(pathToSlaves string) (Config, error) {
+	ls := Config{}
 	yamlFile, err := ioutil.ReadFile(pathToSlaves)
-	if err == nil {
-		err = yaml.Unmarshal(yamlFile, &ls)
+	if err != nil {
+		return Config{}, err
+
 	}
-	return ls, err
+
+	err = yaml.Unmarshal(yamlFile, &ls)
+	if err != nil {
+		return Config{}, err
+	}
+
+	if err := ls.validate(); err != nil {
+		return Config{}, err
+	}
+
+	return ls, nil
 }
