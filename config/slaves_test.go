@@ -17,66 +17,82 @@
 
 package config
 
-import "testing"
-
-var (
-	valuesTest = [...]string{
-		"localhost:8080",
-		"192.168.0.23:8080",
-		"192.168.0.3333.043",
-		":7070",
-		"300.34.23.2:6767",
-		"/dev/ttyS4sw34",
-		"/dev",
-		"/dev/ttyUSB0",
-		"/dev/ttyS0",
-	}
-	expectedTest = [...]PortType{
-		IP,
-		IP,
-		Invalid,
-		Invalid,
-		Invalid,
-		Invalid,
-		Invalid,
-		Serial,
-		Serial,
-	}
+import (
+	"strconv"
+	"testing"
 )
 
 func TestCheckPort(t *testing.T) {
-	s := new(Target)
-	for i, v := range valuesTest {
-		s.Port = v
-		pType := CheckPortTarget(*s)
-		if expectedTest[i] != pType {
-			t.Errorf("at port %s, expected %s, got %s.", v, expectedTest[i], pType)
-		}
+	tests := []struct {
+		input         string
+		protocol      ModbusProtocol
+		expectedError error
+	}{
+		{
+			"localhost:8080",
+			ModbusProtocolTCPIP,
+			nil,
+		},
+		{
+			"192.168.0.23:8080",
+			ModbusProtocolTCPIP,
+			nil,
+		},
+		{
+			"192.168.0.3333.043",
+			"",
+			&ModbusProtocolValidationError{},
+		},
+		{":7070", "", &ModbusProtocolValidationError{}},
+		{"300.34.23.2:6767", "", &ModbusProtocolValidationError{}},
+		{"/dev/ttyS4sw34", "", &ModbusProtocolValidationError{}},
+		{"/dev", "", &ModbusProtocolValidationError{}},
+		{"/dev/ttyUSB0", ModbusProtocolSerial, nil},
+		{"/dev/ttyS0", ModbusProtocolSerial, nil},
+	}
+	for i, loopTest := range tests {
+		test := loopTest
+
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			protocol, err := CheckPortTarget(test.input)
+
+			if test.expectedError == nil {
+				if test.protocol != protocol {
+					t.Fatalf("expected protocol %v but got %v", test.protocol, protocol)
+				}
+
+				if err != nil {
+					t.Fatalf("expected no error but got %v", err)
+				}
+
+				return
+			}
+		})
 	}
 }
 
-var (
-	slavesBad = [...]Target{
-		Target{Port: "localhost:8080", Parity: "abc"},
-		Target{Port: "localhost:8080", Parity: "N"},
-		Target{Port: "localhost:8080", Stopbits: 4},
-		Target{Port: "localhost:8080", Baudrate: -1},
-		Target{Port: "localhost:8080", Databits: 50},
-		Target{Port: "localhost:8080", Baudrate: -1},
-	}
-	regDefTest = []MetricDef{
-		{
-			Name:     "test",
-			Address:  34,
-			DataType: "int16",
-		},
-	}
-	slavesGood = [...]Target{
-		Target{Port: "localhost:8080", DigitalOutput: regDefTest},
-	}
-)
-
 func TestValidate(t *testing.T) {
+	var (
+		slavesBad = [...]Module{
+			{Parity: "abc"},
+			{Parity: "N"},
+			{Stopbits: 4},
+			{Baudrate: -1},
+			{Databits: 50},
+			{Baudrate: -1},
+		}
+		regDefTest = []MetricDef{
+			{
+				Name:     "test",
+				Address:  34,
+				DataType: "int16",
+			},
+		}
+		slavesGood = [...]Module{
+			{DigitalOutput: regDefTest, Protocol: ModbusProtocolTCPIP},
+		}
+	)
+
 	for _, s := range slavesGood {
 		if err := s.validate(); err != nil {
 			t.Errorf("validation of %v expected to pass but received the error:\n"+
@@ -92,7 +108,7 @@ func TestValidate(t *testing.T) {
 }
 
 func BenchmarkPrettyPrint(b *testing.B) {
-	s := Target{Port: "localhost:8080", Parity: "O", Stopbits: 1, Databits: 7}
+	s := Module{Parity: "O", Stopbits: 1, Databits: 7}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		s.PrettyString()

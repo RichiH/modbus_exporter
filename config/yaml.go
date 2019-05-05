@@ -29,12 +29,12 @@ import (
 
 // Config represents the configuration of the modbus exporter.
 type Config struct {
-	Targets []Target `yaml:"targets"`
+	Modules []Module `yaml:"modules"`
 }
 
 // validate semantically validates the given config.
 func (c *Config) validate() error {
-	for _, t := range c.Targets {
+	for _, t := range c.Modules {
 		if err := t.validate(); err != nil {
 			return err
 		}
@@ -45,27 +45,27 @@ func (c *Config) validate() error {
 
 // ListSlaves is the list of configurations of the slaves from the configuration
 // file.
-type ListSlaves map[string]*Target
+type ListSlaves map[string]*Module
 
-// Target defines the configuration parameters of a single slave.
+// Module defines the configuration parameters of a single slave.
 // Parity Values => N (None), E (Even), O (Odd)
 //
 // Default serial:
 // Baudrate: 19200, Databits: 8, Stopbits: 1, Parity: E
-type Target struct {
-	Name          string      `yaml:"name"`
-	Port          string      `yaml:"port"`
-	ID            byte        `yaml:"id"`
-	Timeout       int         `yaml:"timeout"`
-	Baudrate      int         `yaml:"baudrate"`
-	Databits      int         `yaml:"databits"`
-	Stopbits      int         `yaml:"stopbits"`
-	Parity        string      `yaml:"parity"`
-	KeepAlive     bool        `yaml:"keepAlive"`
-	DigitalInput  []MetricDef `yaml:"digitalIn"`
-	DigitalOutput []MetricDef `yaml:"digitalOut"`
-	AnalogInput   []MetricDef `yaml:"analogIn"`
-	AnalogOutput  []MetricDef `yaml:"analogOut"`
+type Module struct {
+	Name          string         `yaml:"name"`
+	Protocol      ModbusProtocol `yaml:"protocol"`
+	Timeout       int            `yaml:"timeout"`
+	Baudrate      int            `yaml:"baudrate"`
+	Databits      int            `yaml:"databits"`
+	Stopbits      int            `yaml:"stopbits"`
+	Parity        string         `yaml:"parity"`
+	ID            byte           `yaml:"id"`
+	KeepAlive     bool           `yaml:"keepAlive"`
+	DigitalInput  []MetricDef    `yaml:"digitalIn"`
+	DigitalOutput []MetricDef    `yaml:"digitalOut"`
+	AnalogInput   []MetricDef    `yaml:"analogIn"`
+	AnalogOutput  []MetricDef    `yaml:"analogOut"`
 }
 
 // RegisterAddr specifies the register in the possible output of _digital
@@ -176,8 +176,8 @@ func (d *MetricDef) validate() error {
 }
 
 // PrettyString prints only the initialized values
-func (s *Target) PrettyString() string {
-	res := "{Port: " + s.Port
+func (s *Module) PrettyString() string {
+	res := ""
 	if s.ID != 0 {
 		res += fmt.Sprintf(", ID: %v", s.ID)
 	}
@@ -200,59 +200,63 @@ func (s *Target) PrettyString() string {
 	return res
 }
 
-// PortType represents the type of the port of a Slave.
-type PortType int
-
-func (p PortType) String() string {
-	return portNames[p]
-}
+// ModbusProtocol specifies the protocol used to retrieve modbus data.
+type ModbusProtocol string
 
 const (
-	// IP is an IPv4 port
-	IP PortType = iota
-	// Serial is an USB port
-	Serial
-	// Invalid is a not valid port
-	Invalid
+	// ModbusProtocolTCPIP represents modbus via TCP/IP.
+	ModbusProtocolTCPIP = "tcp/ip"
+	// ModbusProtocolSerial represents modbus via Serial.
+	ModbusProtocolSerial = "serial"
 )
 
 var (
-	portNames    = [...]string{"IP", "serial", "invalid"}
 	serialPrefix = [...]string{"/dev/ttyACM", "/dev/ttyUSB", "/dev/ttyS"}
 )
+
+// ModbusProtocolValidationError is returned on invalid or unsupported modbus
+// protocol specifications.
+type ModbusProtocolValidationError struct {
+	e string
+}
+
+// Error implements the Golang error interface.
+func (e *ModbusProtocolValidationError) Error() string {
+	return e.e
+}
 
 // CheckPortTarget indetifies the port as a PortType in order to identify the type
 // of connection to stqablish in the Modbus Manager. Returns Invalid or IP, and
 // Invalid when the Port property has an inidentifiable content.
-func CheckPortTarget(s Target) PortType {
+func CheckPortTarget(t string) (ModbusProtocol, *ModbusProtocolValidationError) {
 	var prefixSerial string
 	isSerial := false
 	for i := 0; i < len(serialPrefix) && !isSerial; i++ {
 		prefixSerial = serialPrefix[i]
-		isSerial = strings.HasPrefix(s.Port, prefixSerial)
+		isSerial = strings.HasPrefix(t, prefixSerial)
 	}
 	// checks if it's a correct port
-	if isSerial && len(s.Port) > len(prefixSerial) {
-		portNumber := s.Port[len(prefixSerial):]
+	if isSerial && len(t) > len(prefixSerial) {
+		portNumber := t[len(prefixSerial):]
 		if v, err := strconv.Atoi(portNumber); err == nil && v >= 0 {
-			return Serial
+			return ModbusProtocolSerial, nil
 		}
 	}
 	// checks if it's a correct IP
-	if i := strings.LastIndex(s.Port, ":"); i > -1 {
-		_, err := strconv.Atoi(s.Port[i+1:])
+	if i := strings.LastIndex(t, ":"); i > -1 {
+		_, err := strconv.Atoi(t[i+1:])
 		if err != nil {
-			return Invalid
+			return "", &ModbusProtocolValidationError{fmt.Sprintf("failed to validate IP '%v': %v", t, err)}
 		}
-		IPv4 := net.ParseIP(s.Port[:i]).To4()
-		if IPv4 != nil || s.Port[:i] == "localhost" {
-			return IP
+		IPv4 := net.ParseIP(t[:i]).To4()
+		if IPv4 != nil || t[:i] == "localhost" {
+			return ModbusProtocolTCPIP, nil
 		}
 	}
-	return Invalid
+	return "", &ModbusProtocolValidationError{fmt.Sprintf("failed to extract modbus protocol from '%v'", t)}
 }
 
-func (s *Target) hasRegisterDefinitions() bool {
+func (s *Module) hasRegisterDefinitions() bool {
 	return len(s.DigitalInput) != 0 || len(s.DigitalOutput) != 0 ||
 		len(s.AnalogInput) != 0 || len(s.AnalogOutput) != 0
 }
@@ -263,15 +267,11 @@ func (s *Target) hasRegisterDefinitions() bool {
 // -Stopbits must be 1 or 2.
 // -Databits must be 5, 6, 7 or 8.
 // -Parity has to be "N", "E" or "O". The use of no parity requires 2 stop bits.
-func (s *Target) validate() error {
+func (s *Module) validate() error {
 	var err error
-	// TODO: Is the pointer dereference safe?
-	switch CheckPortTarget(*s) {
-	case Invalid:
-		newErr := fmt.Errorf("invalid port \"%s\" in slave \"%s\"", s.Port, s.Name)
-		err = multierror.Append(err, newErr)
-	// checking the specific parameters for a serial connection
-	case Serial:
+
+	switch s.Protocol {
+	case ModbusProtocolSerial:
 		if s.Baudrate < 0 || s.Stopbits < 0 || s.Databits < 0 || s.Timeout < 0 {
 			newErr := fmt.Errorf("invalid negative value in slave \"%s\"", s.Name)
 			err = multierror.Append(err, newErr)
@@ -300,12 +300,19 @@ func (s *Target) validate() error {
 		// 	err = multierror.Append(err, newErr)
 		// }
 	// checking the absence of specific parameters for a serial connection
-	case IP:
+	case ModbusProtocolTCPIP:
 		if s.Parity != "" || s.Stopbits != 0 || s.Databits != 0 || s.Baudrate != 0 {
 			newErr := fmt.Errorf("invalid argument in slave %s, TCP slaves don't"+
 				"use Parity, Stopbits, Databits or Baudrate.", s.Name)
 			err = multierror.Append(err, newErr)
 		}
+	default:
+		err = multierror.Append(
+			err,
+			fmt.Errorf("expected one of '%v' protocol but got '%v'",
+				[]string{ModbusProtocolTCPIP, ModbusProtocolSerial},
+				s.Protocol,
+			))
 	}
 	// track that error if we have no register definitions
 	if !s.hasRegisterDefinitions() {
