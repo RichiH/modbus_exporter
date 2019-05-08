@@ -10,6 +10,8 @@ script:
         # Make sure /vendor is in sync.
         - go mod tidy && go mod vendor && git diff --exit-code
 
+        - make lint
+
         - go install
 
         - go test ./...
