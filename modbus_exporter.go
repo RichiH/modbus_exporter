@@ -58,13 +58,7 @@ func main() {
 
 	log.Info(config)
 
-	// TODO: Might be worth reusing some of the validation of ParseSlaves.
-	// parsedSlaves, err := parser.ParseSlaves(slavesFile)
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-
-	log.Infoln("Telemetry metrics at: " + *telemetryAddress)
+	log.Infoln("telemetry metrics at: " + *telemetryAddress)
 	go func() {
 		log.Fatal(
 			http.ListenAndServe(*telemetryAddress, promhttp.HandlerFor(telemetryRegistry, promhttp.HandlerOpts{})),

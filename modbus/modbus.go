@@ -98,7 +98,7 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 			}
 		}
 		// starts the data scrapping routine
-		err := request.scrapeSlave(module, &Handler{
+		err := request.scrape(module, &Handler{
 			Type:      config.ModbusProtocolTCPIP,
 			KeepAlive: module.KeepAlive,
 			Handler:   handler})
@@ -131,7 +131,7 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 				targetAddress, module.Name)
 		}
 		// starts the data scrapping routine
-		err := request.scrapeSlave(module, &Handler{
+		err := request.scrape(module, &Handler{
 			Type:      config.ModbusProtocolSerial,
 			KeepAlive: false,
 			Handler:   handler})
@@ -151,7 +151,7 @@ func newScrapeRequest(reg prometheus.Registerer) *scrapeRequest {
 			Name: "modbus_digital_input_total",
 			Help: "Modbus digital input registers.",
 		},
-		[]string{"slave", "name"},
+		[]string{"target", "name"},
 	)
 
 	request.modbusAnalogIn = prometheus.NewGaugeVec(
@@ -159,14 +159,14 @@ func newScrapeRequest(reg prometheus.Registerer) *scrapeRequest {
 			Name: "modbus_analog_input_total",
 			Help: "Modbus analog input registers.",
 		},
-		[]string{"slave", "name"},
+		[]string{"target", "name"},
 	)
 	request.modbusDigitalOut = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "modbus_digital_output_total",
 			Help: "Modbus digital output registers.",
 		},
-		[]string{"slave", "name"},
+		[]string{"target", "name"},
 	)
 
 	request.modbusAnalogOut = prometheus.NewGaugeVec(
@@ -174,7 +174,7 @@ func newScrapeRequest(reg prometheus.Registerer) *scrapeRequest {
 			Name: "modbus_analog_output_total",
 			Help: "Modbus analog output registers.",
 		},
-		[]string{"slave", "name"},
+		[]string{"target", "name"},
 	)
 
 	reg.MustRegister(
@@ -218,7 +218,7 @@ func (hc *Handler) Close() error {
 	return hc.Handler.Close()
 }
 
-func (r *scrapeRequest) scrapeSlave(slave config.Module, hc *Handler) error {
+func (r *scrapeRequest) scrape(module config.Module, hc *Handler) error {
 	// TODO: Should we reuse this?
 	c := modbus.NewClient(hc.Handler)
 	var (
@@ -227,61 +227,61 @@ func (r *scrapeRequest) scrapeSlave(slave config.Module, hc *Handler) error {
 	)
 
 	if hc.Type == config.ModbusProtocolTCPIP {
-		if len(slave.DigitalInput) != 0 {
-			values, err = getModbusData(slave.DigitalInput,
+		if len(module.DigitalInput) != 0 {
+			values, err = getModbusData(module.DigitalInput,
 				c.ReadDiscreteInputs, config.DigitalInput)
 			if err != nil {
 				return fmt.Errorf("[%s:%s] %s",
-					slave.Name, config.DigitalInput.String(), err)
+					module.Name, config.DigitalInput.String(), err)
 			}
 			for i, v := range values {
 				r.modbusDigitalIn.WithLabelValues(
-					slave.Name,
-					slave.DigitalInput[i].Name,
+					module.Name,
+					module.DigitalInput[i].Name,
 				).Set(v)
 			}
 
 		}
-		if len(slave.DigitalOutput) != 0 {
-			values, err = getModbusData(slave.DigitalOutput,
+		if len(module.DigitalOutput) != 0 {
+			values, err = getModbusData(module.DigitalOutput,
 				c.ReadCoils, config.DigitalOutput)
 			if err != nil {
 				return fmt.Errorf("[%s:%s] %s",
-					slave.Name, config.DigitalOutput.String(), err)
+					module.Name, config.DigitalOutput.String(), err)
 			}
 			for i, v := range values {
 				r.modbusDigitalOut.WithLabelValues(
-					slave.Name,
-					slave.DigitalOutput[i].Name,
+					module.Name,
+					module.DigitalOutput[i].Name,
 				).Set(v)
 			}
 		}
-		if len(slave.AnalogInput) != 0 {
-			values, err = getModbusData(slave.AnalogInput,
+		if len(module.AnalogInput) != 0 {
+			values, err = getModbusData(module.AnalogInput,
 				c.ReadInputRegisters, config.AnalogInput)
 			if err != nil {
 				return fmt.Errorf("[%s:%s] %s",
-					slave.Name, config.AnalogInput.String(), err)
+					module.Name, config.AnalogInput.String(), err)
 			}
 			for i, v := range values {
 				r.modbusAnalogIn.WithLabelValues(
-					slave.Name,
-					slave.AnalogInput[i].Name,
+					module.Name,
+					module.AnalogInput[i].Name,
 				).Set(v)
 			}
 		}
 
-		if len(slave.AnalogOutput) != 0 {
-			values, err = getModbusData(slave.AnalogOutput,
+		if len(module.AnalogOutput) != 0 {
+			values, err = getModbusData(module.AnalogOutput,
 				c.ReadHoldingRegisters, config.AnalogOutput)
 			if err != nil {
 				return fmt.Errorf("[%s:%s] %s",
-					slave.Name, config.AnalogOutput.String(), err)
+					module.Name, config.AnalogOutput.String(), err)
 			}
 			for i, v := range values {
 				r.modbusAnalogOut.WithLabelValues(
-					slave.Name,
-					slave.AnalogOutput[i].Name,
+					module.Name,
+					module.AnalogOutput[i].Name,
 				).Set(v)
 			}
 		}
@@ -293,10 +293,9 @@ func (r *scrapeRequest) scrapeSlave(slave config.Module, hc *Handler) error {
 // modbus read function type
 type modbusFunc func(address, quantity uint16) ([]byte, error)
 
-// getModbusData returns the list of values from a slave
-// TODO: rename registers to definitions.
-func getModbusData(registers []config.MetricDef, f modbusFunc, t config.RegType) ([]float64, error) {
-	if len(registers) == 0 {
+// getModbusData returns the list of values from a target
+func getModbusData(definitions []config.MetricDef, f modbusFunc, t config.RegType) ([]float64, error) {
+	if len(definitions) == 0 {
 		return []float64{}, nil
 	}
 
@@ -304,9 +303,9 @@ func getModbusData(registers []config.MetricDef, f modbusFunc, t config.RegType)
 	results := make([]float64, 0, 125)
 
 	// saves first and last register value to be obtained
-	first := registers[0].Address
+	first := definitions[0].Address
 	var last config.RegisterAddr
-	for _, def := range registers {
+	for _, def := range definitions {
 		if def.Address > last {
 			last = def.Address
 		}
@@ -342,7 +341,7 @@ func getModbusData(registers []config.MetricDef, f modbusFunc, t config.RegType)
 		}
 
 		if err != nil {
-			results = make([]float64, len(registers))
+			results = make([]float64, len(definitions))
 			break
 		}
 
@@ -350,21 +349,21 @@ func getModbusData(registers []config.MetricDef, f modbusFunc, t config.RegType)
 		// the maximum length of digital or analog return.
 		for i := 0; i < int(rangeN) && i < int(div-1); i++ {
 			// Check if we are already done.
-			if regIndex >= len(registers) {
+			if regIndex >= len(definitions) {
 				break
 			}
 
 			switch t {
 			case config.DigitalInput, config.DigitalOutput:
-				if modBytesFirstRegister+config.RegisterAddr(i) == registers[regIndex].Address {
+				if modBytesFirstRegister+config.RegisterAddr(i) == definitions[regIndex].Address {
 					// TODO: Use metric definition parse.
 					data := float64((modBytes[i/8] >> uint16(i) % 8) & 1)
 					results = append(results, data)
 					regIndex++
 				}
 			case config.AnalogInput, config.AnalogOutput:
-				if modBytesFirstRegister+config.RegisterAddr(i) == registers[regIndex].Address {
-					data, err := registers[regIndex].Parse([2]byte{modBytes[i*2], modBytes[(i*2)+1]})
+				if modBytesFirstRegister+config.RegisterAddr(i) == definitions[regIndex].Address {
+					data, err := definitions[regIndex].Parse([2]byte{modBytes[i*2], modBytes[(i*2)+1]})
 					if err != nil {
 						return []float64{}, err
 					}
