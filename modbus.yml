@@ -1,6 +1,6 @@
-targets:
-  - name: simulator
-    port: 127.0.0.1:1502
+modules:
+  - name: "fake"
+    protocol: "tcp/ip"
     id: 1
     analogIn:
       - name: register_twenty_two

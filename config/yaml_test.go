@@ -42,6 +42,22 @@ func TestMetricDefValidate(t *testing.T) {
 	}
 }
 
+func TestModuleValidate(t *testing.T) {
+	m := Module{}
+
+	m.Protocol = "invalid"
+	m.AnalogOutput = []MetricDef{
+		{
+			DataType: ModbusInt16,
+		},
+	}
+
+	err := m.validate()
+	if err == nil {
+		t.Fatal("expected validation to fail with invalid modbus protocol")
+	}
+}
+
 func TestMetricDefParse(t *testing.T) {
 	offsetZero := 0
 	offsetOne := 1

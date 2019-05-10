@@ -1,0 +1,17 @@
+global:
+        scrape_interval: 1s
+        # evaluation_interval: 15s
+scrape_configs:
+  - job_name: 'modbus'
+    static_configs:
+      - targets:
+              - 127.0.0.1:1502  # modbus device.
+    params:
+      module: ["fake"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9010  # The modbus exporter's real hostname:port.

@@ -50,9 +50,6 @@ func main() {
 	telemetryRegistry.MustRegister(prometheus.NewGoCollector())
 	telemetryRegistry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 
-	modbusRegistry := prometheus.NewRegistry()
-	modbus.RegisterMetrics(modbusRegistry)
-
 	log.Infoln("Loading configuration file", *configFile)
 	config, err := config.LoadConfig(*configFile)
 	if err != nil {
@@ -66,10 +63,6 @@ func main() {
 	// if err != nil {
 	// 	log.Fatalln(err)
 	// }
-	err = modbus.RegisterData(config)
-	if err != nil {
-		log.Fatalln(err)
-	}
 
 	log.Infoln("Telemetry metrics at: " + *telemetryAddress)
 	go func() {
@@ -78,8 +71,26 @@ func main() {
 		)
 	}()
 
+	exporter := modbus.NewExporter(config)
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		moduleName := r.URL.Query().Get("module")
+
+		target := r.URL.Query().Get("target")
+
+		log.Infof("got scrape request for module '%v' and target '%v'", moduleName, target)
+
+		gatherer, err := exporter.Scrape(target, moduleName)
+		if err != nil {
+			// TODO: Handle error.
+			panic(err)
+		}
+
+		promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}).ServeHTTP(w, r)
+	}
+
 	log.Infoln("Modbus metrics at: " + *modbusAddress)
 	log.Fatal(
-		http.ListenAndServe(*modbusAddress, promhttp.HandlerFor(modbusRegistry, promhttp.HandlerOpts{})),
+		http.ListenAndServe(*modbusAddress, http.HandlerFunc(handler)),
 	)
 }
