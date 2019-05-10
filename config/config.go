@@ -43,11 +43,40 @@ func (c *Config) validate() error {
 	return nil
 }
 
-// ListSlaves is the list of configurations of the slaves from the configuration
-// file.
-type ListSlaves map[string]*Module
+// RegType is a helper type to obtain the name of the register types
+type RegType int
 
-// Module defines the configuration parameters of a single slave.
+const (
+	// DigitalInput identifies the digital input value
+	DigitalInput RegType = iota
+	// DigitalOutput identifies the digital output value
+	DigitalOutput
+	// AnalogInput identifies the analog input value
+	AnalogInput
+	// AnalogOutput identifies the analog output value
+	AnalogOutput
+)
+
+func (r RegType) String() string {
+	var s string
+	switch r {
+	case DigitalInput:
+		s = "DIn"
+	case DigitalOutput:
+		s = "DOut"
+	case AnalogInput:
+		s = "AIn"
+	case AnalogOutput:
+		s = "AOut"
+	}
+	return s
+}
+
+// ListTargets is the list of configurations of the targets from the configuration
+// file.
+type ListTargets map[string]*Module
+
+// Module defines the configuration parameters of a single target.
 // Parity Values => N (None), E (Even), O (Odd)
 //
 // Default serial:
@@ -273,37 +302,37 @@ func (s *Module) validate() error {
 	switch s.Protocol {
 	case ModbusProtocolSerial:
 		if s.Baudrate < 0 || s.Stopbits < 0 || s.Databits < 0 || s.Timeout < 0 {
-			newErr := fmt.Errorf("invalid negative value in slave \"%s\"", s.Name)
+			newErr := fmt.Errorf("invalid negative value in target \"%s\"", s.Name)
 			err = multierror.Append(err, newErr)
 		}
 		// Data bits: default, 5, 6, 7 or 8
 		if s.Databits != 0 && (s.Databits < 5 || s.Databits > 8) {
-			newErr := fmt.Errorf("invalid data bits value in slave \"%s\"", s.Name)
+			newErr := fmt.Errorf("invalid data bits value in target \"%s\"", s.Name)
 			err = multierror.Append(err, newErr)
 		}
 		// Stop bits: default, 1 or 2
 		if s.Stopbits > 2 {
-			newErr := fmt.Errorf("invalid stop bits value in slave \"%s\"", s.Name)
+			newErr := fmt.Errorf("invalid stop bits value in target \"%s\"", s.Name)
 			err = multierror.Append(err, newErr)
 		}
 		// Parity: N (None), E (Even), O (Odd)
 		if s.Parity != "N" && s.Parity != "E" && s.Parity != "O" &&
 			s.Parity != "" {
-			newErr := fmt.Errorf("invalid parity value in slave \"%s\" "+
+			newErr := fmt.Errorf("invalid parity value in target \"%s\" "+
 				"N (None), E (Even), O (Odd)", s.Name)
 			err = multierror.Append(err, newErr)
 		}
 		// The use of no parity requires 2 stop bits.
 		// if s.Parity == "N" && s.Stopbits != 2 {
 		// 	newErr := fmt.Errorf("the use of no parity requires 2 stop bits in "+
-		// 		"slave \"%s\"", s.Name)
+		// 		"target \"%s\"", s.Name)
 		// 	err = multierror.Append(err, newErr)
 		// }
 	// checking the absence of specific parameters for a serial connection
 	case ModbusProtocolTCPIP:
 		if s.Parity != "" || s.Stopbits != 0 || s.Databits != 0 || s.Baudrate != 0 {
-			newErr := fmt.Errorf("invalid argument in slave %s, TCP slaves don't"+
-				"use Parity, Stopbits, Databits or Baudrate.", s.Name)
+			newErr := fmt.Errorf("invalid argument in target %s, TCP targets don't"+
+				"use Parity, Stopbits, Databits or Baudrate", s.Name)
 			err = multierror.Append(err, newErr)
 		}
 	default:
@@ -316,7 +345,7 @@ func (s *Module) validate() error {
 	}
 	// track that error if we have no register definitions
 	if !s.hasRegisterDefinitions() {
-		noRegErr := fmt.Errorf("no register definition found in slave %s", s.Name)
+		noRegErr := fmt.Errorf("no register definition found in target %s", s.Name)
 		err = multierror.Append(err, noRegErr)
 	}
 

@@ -24,10 +24,10 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// LoadConfig unmarshals the slaves configuration file.
-func LoadConfig(pathToSlaves string) (Config, error) {
+// LoadConfig unmarshals the targets configuration file.
+func LoadConfig(pathToTargets string) (Config, error) {
 	ls := Config{}
-	yamlFile, err := ioutil.ReadFile(pathToSlaves)
+	yamlFile, err := ioutil.ReadFile(pathToTargets)
 	if err != nil {
 		return Config{}, err
 

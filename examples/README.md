@@ -3,14 +3,14 @@
 This exporter needs a configuration file because the modbus protocol requires a lot of parameters in order to start a communication.
 The format of the file is yaml so you can apply its rules when writing the file.
 
-## Slave Parameters
+## Target Parameters
 ### General
 - timeout: sets the timeout in milliseconds.
-- id: assigns the slave's id.
+- id: assigns the target's id.
 
 ### TCP/IP
 - port: you have to define a valid IP address. e.g. `"localhost:8080"` or `"192.168.0.192:9090"`.
-- keepAlive: if the slave handles a keep alive connection. Boolean `true` or `false`. Default value = `false`
+- keepAlive: if the target handles a keep alive connection. Boolean `true` or `false`. Default value = `false`
 
 ### Serial
 - port: you have to define a valid port. e.g. `"/dev/ttyUSB0"`.
@@ -22,7 +22,7 @@ The format of the file is yaml so you can apply its rules when writing the file.
 ## Register Definition
 Every register must be defined by its type, you can group them as `analogOut`, `analogIn`, `digitalIn` and `digitalOut`.
 There are 2 ways to define the registers to be processed.
-- Enumeration: coma separated registers of the slaves, it can be a single name. e.g. `53, 101, 102, 154` or `34`
+- Enumeration: coma separated registers of the targets, it can be a single name. e.g. `53, 101, 102, 154` or `34`
 - Range: a register value and a higher one separated by a colon, it defines the whole range of register (it is inclusive). e.g. `20:25`, that would be translated to `20,21,22,23,24,25`.
 
 General example:
