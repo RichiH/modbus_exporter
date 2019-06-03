@@ -1,9 +1,9 @@
 # Modbus exporter
-Fault tolerant exporter which retrieves stats from a modbus system and exports them via HTTP for Prometheus consumption.
+Exporter which retrieves stats from a modbus system and exports them via HTTP for Prometheus consumption.
 
 
 ## Building
-you just need Go installed, simply run hte build in the directory as:
+
 ```bash
 go build
 ```
@@ -17,7 +17,7 @@ To run it:
 ./modbus_exporter [flags]
 ```
 
-The configuration will be taken from a configuration file, the exporter will search a fille called `modbus.yml` in the same directory by default.
+The configuration will be taken from a configuration file, the exporter will search for a file called `modbus.yml` in the same directory by default.
 
 Setting a different file and a different listen address:
 ```bash
