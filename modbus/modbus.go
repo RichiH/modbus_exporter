@@ -84,9 +84,6 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 	case config.ModbusProtocolTCPIP:
 		// TODO: We should probably be reusing these, right?
 		handler := modbus.NewTCPClientHandler(targetAddress)
-		// diable logger
-		handler.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
-		//handler.Logger.SetFlags(0)
 		if module.Timeout != 0 {
 			handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
 		}
@@ -107,9 +104,6 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 		}
 	case config.ModbusProtocolSerial:
 		handler := modbus.NewRTUClientHandler(targetAddress)
-		// diable logger
-		handler.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
-		//handler.Logger.SetFlags(0)
 		if module.Baudrate != 0 {
 			handler.BaudRate = module.Baudrate
 		}
