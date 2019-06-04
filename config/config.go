@@ -120,6 +120,7 @@ func (t *ModbusDataType) validate() error {
 
 const (
 	ModbusFloat16 ModbusDataType = "float16"
+	ModbusFloat32 ModbusDataType = "float32"
 	ModbusInt16   ModbusDataType = "int16"
 	ModbusUInt16  ModbusDataType = "uint16"
 	ModbusBool    ModbusDataType = "bool"
@@ -127,6 +128,7 @@ const (
 
 var possibelModbusDataTypes = []ModbusDataType{
 	ModbusFloat16,
+	ModbusFloat32,
 	ModbusInt16,
 	ModbusUInt16,
 	ModbusBool,

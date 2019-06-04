@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -345,6 +346,11 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 			return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
 		}
 		panic("implement")
+	case config.ModbusFloat32:
+		if len(rawData) < 4 {
+			return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 2, got %v", len(rawData))}
+		}
+		return float64(math.Float32frombits(binary.BigEndian.Uint32(rawData[:4]))), nil
 	case config.ModbusInt16:
 		{
 			if len(rawData) < 2 {
