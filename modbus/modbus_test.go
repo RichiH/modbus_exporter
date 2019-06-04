@@ -108,3 +108,89 @@ func insertUInt16(b []byte, register int, v uint16) {
 	b[(register-1)*2] = temp[0]
 	b[(register-1)*2+1] = temp[1]
 }
+
+func TestParseModbusData(t *testing.T) {
+	offsetZero := 0
+	offsetOne := 1
+
+	tests := []struct {
+		name          string
+		input         func() []byte
+		metricDef     func() *config.MetricDef
+		expectedValue float64
+	}{
+		{
+			name: "bool, no bit",
+			input: func() []byte {
+				return []byte{uint8(0), uint8(0)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType:  config.ModbusBool,
+					BitOffset: &offsetZero,
+				}
+			},
+			expectedValue: 0,
+		},
+		{
+			name: "bool, first bit",
+			input: func() []byte {
+				return []byte{uint8(0), uint8(1)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType:  config.ModbusBool,
+					BitOffset: &offsetZero,
+				}
+			},
+			expectedValue: 1,
+		},
+		{
+			name: "bool, second bit",
+			input: func() []byte {
+				return []byte{uint8(0), uint8(2)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType:  config.ModbusBool,
+					BitOffset: &offsetOne,
+				}
+			},
+			expectedValue: 1,
+		},
+	}
+
+	for _, loopTest := range tests {
+
+		test := loopTest
+
+		t.Run(test.name, func(t *testing.T) {
+			f, err := parseModbusData(*test.metricDef(), test.input())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if f != test.expectedValue {
+				t.Fatalf("expected metric value to be %v but got %v", test.expectedValue, f)
+			}
+		})
+	}
+}
+
+func TestParseModbusDataInsufficientRegisters(t *testing.T) {
+	d := config.MetricDef{
+		DataType: config.ModbusInt16,
+	}
+
+	_, err := parseModbusData(d, []byte{})
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	switch err.(type) {
+	case *InsufficientRegistersError:
+	default:
+		t.Fatal("expected InsufficientRegistersError")
+	}
+}

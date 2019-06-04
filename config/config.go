@@ -18,7 +18,6 @@
 package config
 
 import (
-	"encoding/binary"
 	"fmt"
 	"net"
 	"strconv"
@@ -117,47 +116,6 @@ func (t *ModbusDataType) validate() error {
 	}
 
 	return fmt.Errorf("expected one of the following data types %v but got '%v'", possibelModbusDataTypes, *t)
-}
-
-// Parse parses the given byte slice based on the specified Modbus data type and
-// returns the parsed value as a float64 (Prometheus exposition format).
-//
-// TODO: Does this belong here?
-// TODO: Handle Endianness.
-func (d *MetricDef) Parse(rawData [2]byte) (float64, error) {
-	if d == nil {
-		return 0, fmt.Errorf("expected metric definition not to be nil")
-	}
-
-	switch d.DataType {
-	case ModbusFloat16:
-		panic("implement")
-	case ModbusInt16:
-		{
-			i := binary.BigEndian.Uint16(rawData[:])
-			return float64(int16(i)), nil
-		}
-	case ModbusUInt16:
-		{
-			i := binary.BigEndian.Uint16(rawData[:])
-			return float64(i), nil
-		}
-	case ModbusBool:
-		{
-			if d.BitOffset == nil {
-				return float64(0), fmt.Errorf("expected bit position on boolean data type")
-			}
-
-			data := binary.BigEndian.Uint16(rawData[:])
-
-			if data&uint16(uint16(1)<<uint16(*d.BitOffset)) > 0 {
-				return float64(1), nil
-			}
-			return float64(0), nil
-		}
-	}
-
-	return 0, fmt.Errorf("failed to parse Modbus data type")
 }
 
 const (
