@@ -2,6 +2,7 @@ package modbus
 
 import (
 	"encoding/binary"
+	"math"
 	"testing"
 
 	"github.com/lupoDharkael/modbus_exporter/config"
@@ -192,5 +193,23 @@ func TestParseModbusDataInsufficientRegisters(t *testing.T) {
 	case *InsufficientRegistersError:
 	default:
 		t.Fatal("expected InsufficientRegistersError")
+	}
+}
+
+func TestParseModbusDataFloat32(t *testing.T) {
+	data := make([]byte, 4)
+	binary.BigEndian.PutUint32(data, math.Float32bits(32))
+
+	def := config.MetricDef{
+		DataType: config.ModbusFloat32,
+	}
+
+	floatValue, err := parseModbusData(def, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if floatValue != 32 {
+		t.Fatalf("expected 32 but got %v", floatValue)
 	}
 }
