@@ -19,6 +19,7 @@
 package modbus
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -293,24 +294,8 @@ func getModbusData(definitions []config.MetricDef, f modbusFunc, t config.RegTyp
 		return []float64{}, nil
 	}
 
-	// results contains the values to be returned
-	results := make([]float64, 0, 125)
+	results := []float64{}
 
-	// saves first and last register value to be obtained
-	first := definitions[0].Address
-	var last config.RegisterAddr
-	for _, def := range definitions {
-		if def.Address > last {
-			last = def.Address
-		}
-	}
-
-	// error needed to evade the
-	var err error
-	// tracking of the actual index in the registers received as parameter
-	regIndex := 0
-	// range of elements to be queried
-	rangeN := (last - first) + 1
 	// number of maximum values per query
 	var div uint16
 	switch t {
@@ -319,53 +304,82 @@ func getModbusData(definitions []config.MetricDef, f modbusFunc, t config.RegTyp
 	case config.AnalogInput, config.AnalogOutput:
 		div = 125 // max registers for an analog query
 	}
-	for it := int(uint16(rangeN) / div); it >= 0; it-- {
-		// Temporal slice for every modbus query.
-		modBytes := []byte{}
-		// The number of the first register loaded into `modBytes`.
-		modBytesFirstRegister := first
 
-		if it > 0 {
-			// query the maximum number of registers
-			modBytes, err = f(uint16(first), div)
-			first += config.RegisterAddr(div)
-		} else {
-			// query the last elements denoted by the incremented 'first' and the last
-			modBytes, err = f(uint16(first), uint16(last-first)+1)
-		}
-
+	for _, definition := range definitions {
+		// TODO: We could cache the results to not repeat overlapping ones.
+		modBytes, err := f(uint16(definition.Address), div)
 		if err != nil {
-			results = make([]float64, len(definitions))
-			break
+			return []float64{}, err
 		}
 
-		// i < int(div-1) make sure not to try to access anything outside
-		// the maximum length of digital or analog return.
-		for i := 0; i < int(rangeN) && i < int(div-1); i++ {
-			// Check if we are already done.
-			if regIndex >= len(definitions) {
-				break
-			}
-
-			switch t {
-			case config.DigitalInput, config.DigitalOutput:
-				if modBytesFirstRegister+config.RegisterAddr(i) == definitions[regIndex].Address {
-					// TODO: Use metric definition parse.
-					data := float64((modBytes[i/8] >> uint16(i) % 8) & 1)
-					results = append(results, data)
-					regIndex++
-				}
-			case config.AnalogInput, config.AnalogOutput:
-				if modBytesFirstRegister+config.RegisterAddr(i) == definitions[regIndex].Address {
-					data, err := definitions[regIndex].Parse([2]byte{modBytes[i*2], modBytes[(i*2)+1]})
-					if err != nil {
-						return []float64{}, err
-					}
-					results = append(results, data)
-					regIndex++
-				}
-			}
+		result, err := parseModbusData(definition, modBytes)
+		if err != nil {
+			return []float64{}, err
 		}
+
+		results = append(results, result)
 	}
-	return results, err
+
+	return results, nil
+}
+
+// InsufficientRegistersError is returned in Parse() whenever not enough
+// registers are provided for the given data type.
+type InsufficientRegistersError struct {
+	e string
+}
+
+// Error implements the Golang error interface.
+func (e *InsufficientRegistersError) Error() string {
+	return fmt.Sprintf("insufficient amount of registers provided: %v", e.e)
+}
+
+// Parse parses the given byte slice based on the specified Modbus data type and
+// returns the parsed value as a float64 (Prometheus exposition format).
+//
+// TODO: Handle Endianness.
+func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
+	switch d.DataType {
+	case config.ModbusFloat16:
+		if len(rawData) < 2 {
+			return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
+		}
+		panic("implement")
+	case config.ModbusInt16:
+		{
+			if len(rawData) < 2 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
+			}
+			i := binary.BigEndian.Uint16(rawData)
+			return float64(int16(i)), nil
+		}
+	case config.ModbusUInt16:
+		{
+			if len(rawData) < 2 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
+			}
+			i := binary.BigEndian.Uint16(rawData)
+			return float64(i), nil
+		}
+	case config.ModbusBool:
+		{
+			// TODO: Maybe we don't need two registers for bool.
+			if len(rawData) < 2 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
+			}
+
+			if d.BitOffset == nil {
+				return float64(0), fmt.Errorf("expected bit position on boolean data type")
+			}
+
+			data := binary.BigEndian.Uint16(rawData)
+
+			if data&(uint16(1)<<uint16(*d.BitOffset)) > 0 {
+				return float64(1), nil
+			}
+			return float64(0), nil
+		}
+	default:
+		return 0, fmt.Errorf("unknown modbus data type")
+	}
 }

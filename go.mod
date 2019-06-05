@@ -1,6 +1,6 @@
 module github.com/lupoDharkael/modbus_exporter
 
-go 1.12
+go 1.11
 
 require (
 	github.com/goburrow/modbus v0.0.0-20161010020032-f7afd8db7d8d
