@@ -147,7 +147,7 @@ func newScrapeRequest(reg prometheus.Registerer) *scrapeRequest {
 			Name: "modbus_digital_input_total",
 			Help: "Modbus digital input registers.",
 		},
-		[]string{"target", "name"},
+		[]string{"module", "name"},
 	)
 
 	request.modbusAnalogIn = prometheus.NewGaugeVec(
@@ -155,14 +155,14 @@ func newScrapeRequest(reg prometheus.Registerer) *scrapeRequest {
 			Name: "modbus_analog_input_total",
 			Help: "Modbus analog input registers.",
 		},
-		[]string{"target", "name"},
+		[]string{"module", "name"},
 	)
 	request.modbusDigitalOut = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "modbus_digital_output_total",
 			Help: "Modbus digital output registers.",
 		},
-		[]string{"target", "name"},
+		[]string{"module", "name"},
 	)
 
 	request.modbusAnalogOut = prometheus.NewGaugeVec(
@@ -170,7 +170,7 @@ func newScrapeRequest(reg prometheus.Registerer) *scrapeRequest {
 			Name: "modbus_analog_output_total",
 			Help: "Modbus analog output registers.",
 		},
-		[]string{"target", "name"},
+		[]string{"module", "name"},
 	)
 
 	reg.MustRegister(
