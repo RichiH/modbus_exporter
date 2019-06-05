@@ -76,8 +76,7 @@ func main() {
 
 		gatherer, err := exporter.Scrape(target, moduleName)
 		if err != nil {
-			// TODO: Handle error.
-			panic(err)
+			log.Fatal(err)
 		}
 
 		promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}).ServeHTTP(w, r)

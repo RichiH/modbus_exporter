@@ -41,3 +41,7 @@ Check the `examples/` folder to read the information about the configuration fil
 - Rework logging.
 
 - Revisit bit parsing.
+
+- Introduce metric type 'gauge', 'counter' in config yaml.
+
+- Make metric name and labels configurable per metric definition.

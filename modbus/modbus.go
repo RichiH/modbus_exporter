@@ -21,8 +21,6 @@ package modbus
 import (
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"math"
 	"time"
 
@@ -31,10 +29,6 @@ import (
 	"github.com/goburrow/modbus"
 	"github.com/lupoDharkael/modbus_exporter/config"
 )
-
-func init() {
-	log.SetOutput(ioutil.Discard)
-}
 
 // Exporter represents a Prometheus exporter converting modbus information
 // retrieved from remote targets via TCP as Prometheus style metrics.
@@ -51,6 +45,7 @@ func NewExporter(config config.Config) *Exporter {
 // specified module returning a Prometheus gatherer with the resulting metrics.
 func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer, error) {
 	reg := prometheus.NewRegistry()
+	metrics := []metric{}
 
 	var module config.Module
 
@@ -65,8 +60,6 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 		return nil, fmt.Errorf("failed to find %v in config", moduleName)
 	}
 
-	request := newScrapeRequest(reg)
-
 	protocol, err := config.CheckPortTarget(targetAddress)
 	if err != nil {
 		return nil, err
@@ -80,8 +73,6 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 		)
 	}
 
-	//var client modbus.Client
-	// creates the client (TCP-IP or Serial)
 	switch module.Protocol {
 	case config.ModbusProtocolTCPIP:
 		// TODO: We should probably be reusing these, right?
@@ -97,13 +88,15 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 			}
 		}
 		// starts the data scrapping routine
-		err := request.scrape(module, &Handler{
+		ms, err := scrape(module, &Handler{
 			Type:      config.ModbusProtocolTCPIP,
 			KeepAlive: module.KeepAlive,
 			Handler:   handler})
 		if err != nil {
 			return nil, err
 		}
+
+		metrics = append(metrics, ms...)
 	case config.ModbusProtocolSerial:
 		handler := modbus.NewRTUClientHandler(targetAddress)
 		if module.Baudrate != 0 {
@@ -127,67 +120,61 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 				targetAddress, module.Name)
 		}
 		// starts the data scrapping routine
-		err := request.scrape(module, &Handler{
+		ms, err := scrape(module, &Handler{
 			Type:      config.ModbusProtocolSerial,
 			KeepAlive: false,
 			Handler:   handler})
 		if err != nil {
 			return nil, err
 		}
+		metrics = append(metrics, ms...)
+	}
+
+	if err := registerMetrics(reg, moduleName, metrics); err != nil {
+		return nil, fmt.Errorf("failed to register metrics for module %v: %v", moduleName, err.Error())
 	}
 
 	return reg, nil
 }
 
-func newScrapeRequest(reg prometheus.Registerer) *scrapeRequest {
-	request := &scrapeRequest{}
+func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []metric) error {
+	registeredMetrics := map[string]*prometheus.GaugeVec{}
 
-	request.modbusDigitalIn = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "modbus_digital_input_total",
-			Help: "Modbus digital input registers.",
-		},
-		[]string{"module", "name"},
-	)
+	for _, m := range metrics {
+		if m.Labels == nil {
+			m.Labels = map[string]string{}
+		}
+		m.Labels["module"] = moduleName
 
-	request.modbusAnalogIn = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "modbus_analog_input_total",
-			Help: "Modbus analog input registers.",
-		},
-		[]string{"module", "name"},
-	)
-	request.modbusDigitalOut = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "modbus_digital_output_total",
-			Help: "Modbus digital output registers.",
-		},
-		[]string{"module", "name"},
-	)
+		// Make sure not to register the same metric twice.
+		collector, ok := registeredMetrics[m.Name]
 
-	request.modbusAnalogOut = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "modbus_analog_output_total",
-			Help: "Modbus analog output registers.",
-		},
-		[]string{"module", "name"},
-	)
+		if !ok {
+			collector = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+				Name: m.Name,
+				Help: m.Help,
+			}, keys(m.Labels))
 
-	reg.MustRegister(
-		request.modbusDigitalIn,
-		request.modbusDigitalOut,
-		request.modbusAnalogIn,
-		request.modbusAnalogOut,
-	)
+			if err := reg.Register(collector); err != nil {
+				return fmt.Errorf("failed to register metric %v: %v", m.Name, err.Error())
+			}
 
-	return request
+			registeredMetrics[m.Name] = collector
+		}
+
+		collector.With(m.Labels).Set(m.Value)
+	}
+
+	return nil
 }
 
-type scrapeRequest struct {
-	modbusDigitalIn  *prometheus.GaugeVec
-	modbusAnalogIn   *prometheus.GaugeVec
-	modbusDigitalOut *prometheus.GaugeVec
-	modbusAnalogOut  *prometheus.GaugeVec
+func keys(m map[string]string) []string {
+	keys := []string{}
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	return keys
 }
 
 // Handler is an API helper to manage a modbus handler
@@ -214,89 +201,82 @@ func (hc *Handler) Close() error {
 	return hc.Handler.Close()
 }
 
-func (r *scrapeRequest) scrape(module config.Module, hc *Handler) error {
+func scrape(module config.Module, hc *Handler) ([]metric, error) {
 	// TODO: Should we reuse this?
 	c := modbus.NewClient(hc.Handler)
-	var (
-		values []float64
-		err    error
-	)
+
+	metrics := []metric{}
 
 	if hc.Type == config.ModbusProtocolTCPIP {
 		if len(module.DigitalInput) != 0 {
-			values, err = getModbusData(module.DigitalInput,
+			ms, err := scrapeModule(module.DigitalInput,
 				c.ReadDiscreteInputs, config.DigitalInput)
 			if err != nil {
-				return fmt.Errorf("[%s:%s] %s",
+				return []metric{}, fmt.Errorf("[%s:%s] %s",
 					module.Name, config.DigitalInput.String(), err)
 			}
-			for i, v := range values {
-				r.modbusDigitalIn.WithLabelValues(
-					module.Name,
-					module.DigitalInput[i].Name,
-				).Set(v)
-			}
+			metrics = append(metrics, ms...)
 
 		}
 		if len(module.DigitalOutput) != 0 {
-			values, err = getModbusData(module.DigitalOutput,
+			ms, err := scrapeModule(module.DigitalOutput,
 				c.ReadCoils, config.DigitalOutput)
 			if err != nil {
-				return fmt.Errorf("[%s:%s] %s",
+				return []metric{}, fmt.Errorf("[%s:%s] %s",
 					module.Name, config.DigitalOutput.String(), err)
 			}
-			for i, v := range values {
-				r.modbusDigitalOut.WithLabelValues(
-					module.Name,
-					module.DigitalOutput[i].Name,
-				).Set(v)
-			}
+			metrics = append(metrics, ms...)
 		}
 		if len(module.AnalogInput) != 0 {
-			values, err = getModbusData(module.AnalogInput,
+			ms, err := scrapeModule(module.AnalogInput,
 				c.ReadInputRegisters, config.AnalogInput)
 			if err != nil {
-				return fmt.Errorf("[%s:%s] %s",
+				return []metric{}, fmt.Errorf("[%s:%s] %s",
 					module.Name, config.AnalogInput.String(), err)
 			}
-			for i, v := range values {
-				r.modbusAnalogIn.WithLabelValues(
-					module.Name,
-					module.AnalogInput[i].Name,
-				).Set(v)
-			}
+			metrics = append(metrics, ms...)
 		}
 
 		if len(module.AnalogOutput) != 0 {
-			values, err = getModbusData(module.AnalogOutput,
+			ms, err := scrapeModule(module.AnalogOutput,
 				c.ReadHoldingRegisters, config.AnalogOutput)
 			if err != nil {
-				return fmt.Errorf("[%s:%s] %s",
+				return []metric{}, fmt.Errorf("[%s:%s] %s",
 					module.Name, config.AnalogOutput.String(), err)
 			}
-			for i, v := range values {
-				r.modbusAnalogOut.WithLabelValues(
-					module.Name,
-					module.AnalogOutput[i].Name,
-				).Set(v)
-			}
+			metrics = append(metrics, ms...)
 		}
 	}
 
-	return nil
+	// TODO: Register the metrics.
+
+	return metrics, nil
+}
+
+func scrapeModule(definitions []config.MetricDef, f modbusFunc, t config.RegType) ([]metric, error) {
+	metrics := []metric{}
+
+	if len(definitions) == 0 {
+		return []metric{}, nil
+	}
+
+	for _, definition := range definitions {
+		m, err := scrapeMetric(definition, f, t)
+		if err != nil {
+			return []metric{}, err
+		}
+
+		metrics = append(metrics, m)
+	}
+
+	return metrics, nil
 }
 
 // modbus read function type
 type modbusFunc func(address, quantity uint16) ([]byte, error)
 
-// getModbusData returns the list of values from a target
-func getModbusData(definitions []config.MetricDef, f modbusFunc, t config.RegType) ([]float64, error) {
-	if len(definitions) == 0 {
-		return []float64{}, nil
-	}
-
-	results := []float64{}
-
+// scrapeMetric returns the list of values from a target
+func scrapeMetric(definition config.MetricDef, f modbusFunc, t config.RegType) (metric, error) {
 	// number of maximum values per query
 	var div uint16
 	switch t {
@@ -306,22 +286,18 @@ func getModbusData(definitions []config.MetricDef, f modbusFunc, t config.RegTyp
 		div = 125 // max registers for an analog query
 	}
 
-	for _, definition := range definitions {
-		// TODO: We could cache the results to not repeat overlapping ones.
-		modBytes, err := f(uint16(definition.Address), div)
-		if err != nil {
-			return []float64{}, err
-		}
-
-		result, err := parseModbusData(definition, modBytes)
-		if err != nil {
-			return []float64{}, err
-		}
-
-		results = append(results, result)
+	// TODO: We could cache the results to not repeat overlapping ones.
+	modBytes, err := f(uint16(definition.Address), div)
+	if err != nil {
+		return metric{}, err
 	}
 
-	return results, nil
+	v, err := parseModbusData(definition, modBytes)
+	if err != nil {
+		return metric{}, err
+	}
+
+	return metric{definition.Name, definition.Help, definition.Labels, v}, nil
 }
 
 // InsufficientRegistersError is returned in Parse() whenever not enough
