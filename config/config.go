@@ -105,17 +105,25 @@ type RegisterAddr uint16
 type ModbusDataType string
 
 func (t *ModbusDataType) validate() error {
+	possibleModbusDataTypes := []ModbusDataType{
+		ModbusFloat16,
+		ModbusFloat32,
+		ModbusInt16,
+		ModbusUInt16,
+		ModbusBool,
+	}
+
 	if t == nil {
 		return fmt.Errorf("expected data type not to be nil")
 	}
 
-	for _, possibelType := range possibelModbusDataTypes {
+	for _, possibelType := range possibleModbusDataTypes {
 		if *t == possibelType {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("expected one of the following data types %v but got '%v'", possibelModbusDataTypes, *t)
+	return fmt.Errorf("expected one of the following data types %v but got '%v'", possibleModbusDataTypes, *t)
 }
 
 const (
@@ -126,13 +134,33 @@ const (
 	ModbusBool    ModbusDataType = "bool"
 )
 
-var possibelModbusDataTypes = []ModbusDataType{
-	ModbusFloat16,
-	ModbusFloat32,
-	ModbusInt16,
-	ModbusUInt16,
-	ModbusBool,
+// MetricType specifies the Prometheus metric type, see
+// https://prometheus.io/docs/concepts/metric_types/ for details.
+type MetricType string
+
+func (t *MetricType) validate() error {
+	possibleMetricTypes := []MetricType{
+		MetricTypeGauge,
+		MetricTypeCounter,
+	}
+
+	if t == nil {
+		return fmt.Errorf("expected metric type not to be nil")
+	}
+
+	for _, possibelType := range possibleMetricTypes {
+		if *t == possibelType {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("expected one of the following metric types %v but got '%v'", possibleMetricTypes, *t)
 }
+
+const (
+	MetricTypeGauge   MetricType = "gauge"
+	MetricTypeCounter MetricType = "counter"
+)
 
 // MetricDef defines how to construct Prometheus metrics based on one or more
 // Modbus registers.
@@ -154,11 +182,17 @@ type MetricDef struct {
 	// type. The two bytes of a register are interpreted in network order (big
 	// endianness). Boolean is determined via `register&(1<<offset)>0`.
 	BitOffset *int `yaml:"bitOffset,omitempty"`
+
+	MetricType MetricType `yaml:"metricType"`
 }
 
 // Validate semantically validates the given metric definition.
 func (d *MetricDef) validate() error {
 	if err := d.DataType.validate(); err != nil {
+		return fmt.Errorf("invalid metric definition %v: %v", d.Name, err)
+	}
+
+	if err := d.MetricType.validate(); err != nil {
 		return fmt.Errorf("invalid metric definition %v: %v", d.Name, err)
 	}
 

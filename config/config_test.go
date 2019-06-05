@@ -16,15 +16,17 @@ func TestMetricDefValidate(t *testing.T) {
 		{
 			"bool",
 			MetricDef{
-				DataType: ModbusBool,
+				DataType:   ModbusBool,
+				MetricType: MetricTypeCounter,
 			},
 			nil,
 		},
 		{
 			"bool",
 			MetricDef{
-				DataType:  ModbusInt16,
-				BitOffset: &one,
+				DataType:   ModbusInt16,
+				BitOffset:  &one,
+				MetricType: MetricTypeCounter,
 			},
 			fmt.Errorf("bitPosition can only be used with boolean data type"),
 		},
@@ -120,9 +122,10 @@ func TestValidate(t *testing.T) {
 		}
 		regDefTest = []MetricDef{
 			{
-				Name:     "test",
-				Address:  34,
-				DataType: "int16",
+				Name:       "test",
+				Address:    34,
+				DataType:   "int16",
+				MetricType: MetricTypeCounter,
 			},
 		}
 		targetsGood = [...]Module{

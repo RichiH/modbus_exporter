@@ -3,9 +3,15 @@ modules:
     protocol: "tcp/ip"
     id: 1
     analogIn:
-      - name: "power_consumption"
+      - name: "power_consumption_total"
         help: "represents the overall power consumption by phase"
         labels:
                 phase: "1"
         address: 22
         dataType: int16
+        metricType: counter
+      - name: "some_gauge"
+        help: "some help for some gauge"
+        address: 22
+        dataType: int16
+        metricType: gauge

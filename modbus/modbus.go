@@ -138,7 +138,8 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 }
 
 func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []metric) error {
-	registeredMetrics := map[string]*prometheus.GaugeVec{}
+	registeredGauges := map[string]*prometheus.GaugeVec{}
+	registeredCounters := map[string]*prometheus.CounterVec{}
 
 	for _, m := range metrics {
 		if m.Labels == nil {
@@ -146,23 +147,47 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 		}
 		m.Labels["module"] = moduleName
 
-		// Make sure not to register the same metric twice.
-		collector, ok := registeredMetrics[m.Name]
+		switch m.MetricType {
+		case config.MetricTypeGauge:
+			// Make sure not to register the same metric twice.
+			collector, ok := registeredGauges[m.Name]
 
-		if !ok {
-			collector = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-				Name: m.Name,
-				Help: m.Help,
-			}, keys(m.Labels))
+			if !ok {
+				collector = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+					Name: m.Name,
+					Help: m.Help,
+				}, keys(m.Labels))
 
-			if err := reg.Register(collector); err != nil {
-				return fmt.Errorf("failed to register metric %v: %v", m.Name, err.Error())
+				if err := reg.Register(collector); err != nil {
+					return fmt.Errorf("failed to register metric %v: %v", m.Name, err.Error())
+				}
+
+				registeredGauges[m.Name] = collector
 			}
 
-			registeredMetrics[m.Name] = collector
+			collector.With(m.Labels).Set(m.Value)
+		case config.MetricTypeCounter:
+			// Make sure not to register the same metric twice.
+			collector, ok := registeredCounters[m.Name]
+
+			if !ok {
+				collector = prometheus.NewCounterVec(prometheus.CounterOpts{
+					Name: m.Name,
+					Help: m.Help,
+				}, keys(m.Labels))
+
+				if err := reg.Register(collector); err != nil {
+					return fmt.Errorf("failed to register metric %v: %v", m.Name, err.Error())
+				}
+
+				registeredCounters[m.Name] = collector
+			}
+
+			// Just to make sure.
+			collector.Reset()
+			collector.With(m.Labels).Add(m.Value)
 		}
 
-		collector.With(m.Labels).Set(m.Value)
 	}
 
 	return nil
@@ -297,7 +322,7 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc, t config.RegType) (
 		return metric{}, err
 	}
 
-	return metric{definition.Name, definition.Help, definition.Labels, v}, nil
+	return metric{definition.Name, definition.Help, definition.Labels, v, definition.MetricType}, nil
 }
 
 // InsufficientRegistersError is returned in Parse() whenever not enough
