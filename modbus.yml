@@ -3,6 +3,9 @@ modules:
     protocol: "tcp/ip"
     id: 1
     analogIn:
-      - name: register_twenty_two
+      - name: "power_consumption"
+        help: "represents the overall power consumption by phase"
+        labels:
+                phase: "1"
         address: 22
         dataType: int16

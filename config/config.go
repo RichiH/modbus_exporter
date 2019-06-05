@@ -137,13 +137,19 @@ var possibelModbusDataTypes = []ModbusDataType{
 // MetricDef defines how to construct Prometheus metrics based on one or more
 // Modbus registers.
 type MetricDef struct {
+	// Name of the metric in the Prometheus output format.
 	Name string `yaml:"name"`
 
+	// Help text of the metric in the Prometheus output format.
+	Help string `yaml:"help"`
+
+	// Labels to be applied to the metric in the Prometheus output format.
+	Labels map[string]string `yaml:"labels"`
+
 	Address RegisterAddr `yaml:"address"`
-	// Index within the register byte slice, only applicable for ModbusBool.
-	Index int8 `yaml:"index"`
 
 	DataType ModbusDataType `yaml:"dataType"`
+
 	// Bit offset within the input register to parse. Only valid for boolean data
 	// type. The two bytes of a register are interpreted in network order (big
 	// endianness). Boolean is determined via `register&(1<<offset)>0`.

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lupoDharkael/modbus_exporter/config"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func TestGetModbusData(t *testing.T) {
@@ -71,9 +72,11 @@ func TestGetModbusData(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for _, loopTest := range tests {
+		test := loopTest
+
 		t.Run(test.name, func(t *testing.T) {
-			v, err := getModbusData(
+			metrics, err := scrapeModule(
 				test.registers,
 				func(address, quantity uint16) ([]byte, error) {
 					// `(register-1)`: byte slice is zero indexed, registers are not.
@@ -86,13 +89,13 @@ func TestGetModbusData(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if len(v) != len(test.expect) {
-				t.Fatalf("expected %v floats, but got %v floats back", len(test.expect), len(v))
+			if len(metrics) != len(test.expect) {
+				t.Fatalf("expected %v floats, but got %v floats back", len(test.expect), len(metrics))
 			}
 
-			for i, v := range v {
-				if v != test.expect[i] {
-					t.Fatalf("expected %v but got %v at index %v", test.expect[i], v, i)
+			for i, m := range metrics {
+				if m.Value != test.expect[i] {
+					t.Fatalf("expected %v but got %v at index %v", test.expect[i], m.Value, i)
 				}
 			}
 		})
@@ -211,5 +214,19 @@ func TestParseModbusDataFloat32(t *testing.T) {
 
 	if floatValue != 32 {
 		t.Fatalf("expected 32 but got %v", floatValue)
+	}
+}
+
+// TestRegisterMetricTwoMetricsSameName makes sure registerMetrics reuses a
+// registered metric in case there is a second one with the same name instead of
+// reregistering which would cause an exception.
+func TestRegisterMetricTwoMetricsSameName(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	a := metric{"my_metric", "", map[string]string{}, 1}
+	b := metric{"my_metric", "", map[string]string{}, 1}
+
+	err := registerMetrics(reg, "my_module", []metric{a, b})
+	if err != nil {
+		t.Fatalf("expected no error but got: %v", err)
 	}
 }
