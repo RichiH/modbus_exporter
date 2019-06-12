@@ -13,3 +13,6 @@ $(GOLANGCI_LINT):
 lint: $(GOLANGCI_LINT)
 	GO111MODULE=on $(GO) list -e -compiled -test=true -export=false -deps=true -find=false -tags= -- ./... > /dev/null
 	GO111MODULE=on $(GOLANGCI_LINT) run $(GOLANGCI_LINT_OPTS) $(pkgs)
+
+test:
+	go test ./...
