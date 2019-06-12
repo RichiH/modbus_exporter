@@ -117,8 +117,8 @@ func (t *ModbusDataType) validate() error {
 		return fmt.Errorf("expected data type not to be nil")
 	}
 
-	for _, possibelType := range possibleModbusDataTypes {
-		if *t == possibelType {
+	for _, possibleType := range possibleModbusDataTypes {
+		if *t == possibleType {
 			return nil
 		}
 	}
@@ -148,8 +148,8 @@ func (t *MetricType) validate() error {
 		return fmt.Errorf("expected metric type not to be nil")
 	}
 
-	for _, possibelType := range possibleMetricTypes {
-		if *t == possibelType {
+	for _, possibleType := range possibleMetricTypes {
+		if *t == possibleType {
 			return nil
 		}
 	}
