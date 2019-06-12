@@ -9,6 +9,65 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+func TestRegisterMetrics(t *testing.T) {
+	t.Run("does not fail", func(t *testing.T) {
+		reg := prometheus.NewRegistry()
+		moduleName := "my_module"
+		metrics := []metric{}
+
+		if err := registerMetrics(reg, moduleName, metrics); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("registers metrics with same name and same label keys", func(t *testing.T) {
+		reg := prometheus.NewRegistry()
+		moduleName := "my_module"
+		metrics := []metric{
+			{
+				Name: "my_metric",
+				Help: "my_help",
+				Labels: map[string]string{
+					"labelKey1": "labelValueA",
+					"labelKey2": "labelValueA",
+				},
+				Value:      1,
+				MetricType: config.MetricTypeCounter,
+			},
+			{
+				Name: "my_metric",
+				Help: "my_help",
+				Labels: map[string]string{
+					"labelKey1": "labelValueB",
+					"labelKey2": "labelValueB",
+				},
+				Value:      2,
+				MetricType: config.MetricTypeCounter,
+			},
+		}
+
+		if err := registerMetrics(reg, moduleName, metrics); err != nil {
+			t.Fatal(err)
+		}
+
+		metricFamilies, err := reg.Gather()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(metricFamilies) != 1 {
+			t.Fatalf("expected %v but got %v", 1, len(metricFamilies))
+		}
+
+		for _, m := range metricFamilies {
+			metrics := m.Metric
+			if len(metrics) != 2 {
+				t.Fatalf("expected %v metrics but got %v", 2, len(metrics))
+			}
+		}
+	})
+}
+
 func TestGetModbusData(t *testing.T) {
 	tests := []struct {
 		name         string

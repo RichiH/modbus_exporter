@@ -57,7 +57,7 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 
 	// TODO: Not a nice way of checking whether the module was found.
 	if module.Name == "" {
-		return nil, fmt.Errorf("failed to find %v in config", moduleName)
+		return nil, fmt.Errorf("failed to find '%v' in config", moduleName)
 	}
 
 	protocol, err := config.CheckPortTarget(targetAddress)
@@ -183,8 +183,6 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 				registeredCounters[m.Name] = collector
 			}
 
-			// Just to make sure.
-			collector.Reset()
 			collector.With(m.Labels).Add(m.Value)
 		}
 
