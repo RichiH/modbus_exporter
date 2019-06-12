@@ -222,8 +222,8 @@ func TestParseModbusDataFloat32(t *testing.T) {
 // reregistering which would cause an exception.
 func TestRegisterMetricTwoMetricsSameName(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	a := metric{"my_metric", "", map[string]string{}, 1}
-	b := metric{"my_metric", "", map[string]string{}, 1}
+	a := metric{"my_metric", "", map[string]string{}, 1, config.MetricTypeCounter}
+	b := metric{"my_metric", "", map[string]string{}, 1, config.MetricTypeCounter}
 
 	err := registerMetrics(reg, "my_module", []metric{a, b})
 	if err != nil {
