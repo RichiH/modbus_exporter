@@ -56,8 +56,6 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	log.Info(config)
-
 	log.Infoln("telemetry metrics at: " + *telemetryAddress)
 	go func() {
 		log.Fatal(
