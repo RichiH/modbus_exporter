@@ -41,6 +41,10 @@ func NewExporter(config config.Config) *Exporter {
 	return &Exporter{config}
 }
 
+func (e *Exporter) GetConfig() *config.Config {
+	return &e.config
+}
+
 // Scrape scrapes the given target via TCP based on the configuration of the
 // specified module returning a Prometheus gatherer with the resulting metrics.
 func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer, error) {
