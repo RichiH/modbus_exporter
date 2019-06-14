@@ -42,6 +42,17 @@ func (c *Config) validate() error {
 	return nil
 }
 
+// HasModule returns whether the given config has a module with the given name.
+func (c *Config) HasModule(n string) bool {
+	for _, m := range c.Modules {
+		if m.Name == n {
+			return true
+		}
+	}
+
+	return false
+}
+
 // RegType is a helper type to obtain the name of the register types
 type RegType int
 
