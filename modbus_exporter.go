@@ -20,7 +20,6 @@ package main
 import (
 	"flag"
 	"net/http"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -38,13 +37,10 @@ var (
 		"The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself.")
 	configFile = flag.String("config.file", "modbus.yml",
 		"Sets the configuration file.")
-	scrapeInterval = flag.Duration("scrape-interval", 8,
-		"Sets scrape interval in seconds.")
 )
 
 func main() {
 	flag.Parse()
-	config.ScrapeInterval = time.Second * (*scrapeInterval)
 
 	telemetryRegistry := prometheus.NewRegistry()
 	telemetryRegistry.MustRegister(prometheus.NewGoCollector())
