@@ -290,7 +290,7 @@ func scrapeModule(definitions []config.MetricDef, f modbusFunc, t config.RegType
 	for _, definition := range definitions {
 		m, err := scrapeMetric(definition, f, t)
 		if err != nil {
-			return []metric{}, err
+			return []metric{}, fmt.Errorf("metric '%v', address '%v': %v", definition.Name, definition.Address, err)
 		}
 
 		metrics = append(metrics, m)
