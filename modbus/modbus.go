@@ -304,14 +304,12 @@ type modbusFunc func(address, quantity uint16) ([]byte, error)
 
 // scrapeMetric returns the list of values from a target
 func scrapeMetric(definition config.MetricDef, f modbusFunc, t config.RegType) (metric, error) {
-	// number of maximum values per query
-	var div uint16
-	switch t {
-	case config.DigitalInput, config.DigitalOutput:
-		div = 2000 // max registers for a digital query
-	case config.AnalogInput, config.AnalogOutput:
-		div = 125 // max registers for an analog query
-	}
+	// For now we are not caching any results, thus we can request the
+	// minimum necessary amount of registers per request. Our biggest data type
+	// is float32, thereby 2 registers are enough. For future reference, the
+	// maximum for digital in/output is 2000 registers, the maximum for analog
+	// in/output is 125.
+	div := uint16(2)
 
 	// TODO: We could cache the results to not repeat overlapping ones.
 	modBytes, err := f(uint16(definition.Address), div)
