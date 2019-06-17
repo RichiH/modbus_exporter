@@ -187,7 +187,28 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 				registeredCounters[m.Name] = collector
 			}
 
-			collector.With(m.Labels).Add(m.Value)
+			// Prometheus client library panics among other things
+			// if the counter value is negative. The below construct
+			// recovers from such panic and properly returns the error
+			// with meta data attached.
+			var err error
+
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						err = r.(error)
+					}
+				}()
+
+				collector.With(m.Labels).Add(m.Value)
+			}()
+
+			if err != nil {
+				return fmt.Errorf(
+					"metric '%v', type '%v', value '%v', labels '%v': %v",
+					m.Name, m.MetricType, m.Value, m.Labels, err,
+				)
+			}
 		}
 
 	}
