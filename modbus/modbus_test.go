@@ -289,3 +289,15 @@ func TestRegisterMetricTwoMetricsSameName(t *testing.T) {
 		t.Fatalf("expected no error but got: %v", err)
 	}
 }
+
+// TestRegisterMetricsRecoverNegativeCounter makes sure the function properly
+// recovers from a prometheus client library panic on negative counter changes.
+func TestRegisterMetricsRecoverNegativeCounter(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	a := metric{"my_metric", "", map[string]string{"key1": "value1", "key2": "value2"}, -1, config.MetricTypeCounter}
+
+	err := registerMetrics(reg, "my_module", []metric{a})
+	if err == nil {
+		t.Fatal("expected an error but got nil")
+	}
+}
