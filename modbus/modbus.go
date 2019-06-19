@@ -51,16 +51,12 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 	reg := prometheus.NewRegistry()
 	metrics := []metric{}
 
-	var module config.Module
+	var (
+		err error
+	)
 
-	for _, m := range e.config.Modules {
-		if m.Name == moduleName {
-			module = m
-		}
-	}
-
-	// TODO: Not a nice way of checking whether the module was found.
-	if module.Name == "" {
+	module := e.config.GetModule(moduleName)
+	if module == nil {
 		return nil, fmt.Errorf("failed to find '%v' in config", moduleName)
 	}
 
