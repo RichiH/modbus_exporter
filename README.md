@@ -45,3 +45,8 @@ Check the `examples/` folder to read the information about the configuration fil
 - Introduce metric type 'gauge', 'counter' in config yaml.
 
 - Make metric name and labels configurable per metric definition.
+
+
+---
+
+Support for serial modbus was dropped in git commit d06573828793094fd2bdf3e7c5d072e7a4fd381b.
