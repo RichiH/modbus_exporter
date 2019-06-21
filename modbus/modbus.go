@@ -51,81 +51,60 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 	reg := prometheus.NewRegistry()
 	metrics := []metric{}
 
-	var (
-		err error
-	)
-
 	module := e.config.GetModule(moduleName)
 	if module == nil {
 		return nil, fmt.Errorf("failed to find '%v' in config", moduleName)
 	}
 
-	protocol, err := config.CheckPortTarget(targetAddress)
-	if err != nil {
-		return nil, err
+	// TODO: We should probably be reusing these, right?
+	handler := modbus.NewTCPClientHandler(targetAddress)
+	if module.Timeout != 0 {
+		handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
+	}
+	handler.SlaveId = module.ID
+	if err := handler.Connect(); err != nil {
+		return nil, fmt.Errorf("unable to connect with target %s via module %s",
+			targetAddress, module.Name)
 	}
 
-	if protocol != module.Protocol {
-		return nil, fmt.Errorf(
-			"target address protocol and module protocol don't match '%v', '%v'",
-			protocol,
-			module.Protocol,
-		)
-	}
+	// TODO: Should we reuse this?
+	c := modbus.NewClient(handler)
 
-	switch module.Protocol {
-	case config.ModbusProtocolTCPIP:
-		// TODO: We should probably be reusing these, right?
-		handler := modbus.NewTCPClientHandler(targetAddress)
-		if module.Timeout != 0 {
-			handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
-		}
-		handler.SlaveId = module.ID
-		if module.KeepAlive {
-			if err := handler.Connect(); err != nil {
-				return nil, fmt.Errorf("unable to connect with target %s via module %s",
-					targetAddress, module.Name)
-			}
-		}
-		// starts the data scrapping routine
-		ms, err := scrape(module, &Handler{
-			Type:      config.ModbusProtocolTCPIP,
-			KeepAlive: module.KeepAlive,
-			Handler:   handler})
+	if len(module.DigitalInput) != 0 {
+		ms, err := scrapeModule(module.DigitalInput,
+			c.ReadDiscreteInputs)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("[%s:%s] %s",
+				module.Name, config.DigitalInput.String(), err)
 		}
-
 		metrics = append(metrics, ms...)
-	case config.ModbusProtocolSerial:
-		handler := modbus.NewRTUClientHandler(targetAddress)
-		if module.Baudrate != 0 {
-			handler.BaudRate = module.Baudrate
-		}
-		if module.Databits != 0 {
-			handler.DataBits = module.Databits
-		}
-		if module.Parity != "" {
-			handler.Parity = module.Parity
-		}
-		if module.Stopbits != 0 {
-			handler.StopBits = module.Stopbits
-		}
-		if module.Timeout != 0 {
-			handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
-		}
-		handler.SlaveId = module.ID
-		if err := handler.Connect(); err != nil {
-			return nil, fmt.Errorf("unable to connect with target %s via module %s",
-				targetAddress, module.Name)
-		}
-		// starts the data scrapping routine
-		ms, err := scrape(module, &Handler{
-			Type:      config.ModbusProtocolSerial,
-			KeepAlive: false,
-			Handler:   handler})
+
+	}
+	if len(module.DigitalOutput) != 0 {
+		ms, err := scrapeModule(module.DigitalOutput,
+			c.ReadCoils)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("[%s:%s] %s",
+				module.Name, config.DigitalOutput.String(), err)
+		}
+		metrics = append(metrics, ms...)
+	}
+	if len(module.AnalogInput) != 0 {
+		ms, err := scrapeModule(module.AnalogInput,
+			c.ReadInputRegisters)
+		if err != nil {
+			return nil, fmt.Errorf("[%s:%s] %s",
+				module.Name, config.AnalogInput.String(), err)
+		}
+		metrics = append(metrics, ms...)
+	}
+
+	if len(module.AnalogOutput) != 0 {
+		ms, err := scrapeModule(module.AnalogOutput,
+			c.ReadHoldingRegisters)
+		if err != nil {
+			return nil, fmt.Errorf("[%s:%s] %s",
+				module.Name, config.AnalogOutput.String(), err)
 		}
 		metrics = append(metrics, ms...)
 	}
@@ -221,83 +200,7 @@ func keys(m map[string]string) []string {
 	return keys
 }
 
-// Handler is an API helper to manage a modbus handler
-//
-// TODO: Can we get rid of this?
-type Handler struct {
-	//Handler         modbus.ClientHandler
-	Type      config.ModbusProtocol
-	KeepAlive bool
-	Handler   interface {
-		modbus.ClientHandler
-		Connect() error
-		Close() error
-	}
-}
-
-// Connect starts the connection
-func (hc *Handler) Connect() error {
-	return hc.Handler.Connect()
-}
-
-// Close closes the connection
-func (hc *Handler) Close() error {
-	return hc.Handler.Close()
-}
-
-func scrape(module config.Module, hc *Handler) ([]metric, error) {
-	// TODO: Should we reuse this?
-	c := modbus.NewClient(hc.Handler)
-
-	metrics := []metric{}
-
-	if hc.Type == config.ModbusProtocolTCPIP {
-		if len(module.DigitalInput) != 0 {
-			ms, err := scrapeModule(module.DigitalInput,
-				c.ReadDiscreteInputs, config.DigitalInput)
-			if err != nil {
-				return []metric{}, fmt.Errorf("[%s:%s] %s",
-					module.Name, config.DigitalInput.String(), err)
-			}
-			metrics = append(metrics, ms...)
-
-		}
-		if len(module.DigitalOutput) != 0 {
-			ms, err := scrapeModule(module.DigitalOutput,
-				c.ReadCoils, config.DigitalOutput)
-			if err != nil {
-				return []metric{}, fmt.Errorf("[%s:%s] %s",
-					module.Name, config.DigitalOutput.String(), err)
-			}
-			metrics = append(metrics, ms...)
-		}
-		if len(module.AnalogInput) != 0 {
-			ms, err := scrapeModule(module.AnalogInput,
-				c.ReadInputRegisters, config.AnalogInput)
-			if err != nil {
-				return []metric{}, fmt.Errorf("[%s:%s] %s",
-					module.Name, config.AnalogInput.String(), err)
-			}
-			metrics = append(metrics, ms...)
-		}
-
-		if len(module.AnalogOutput) != 0 {
-			ms, err := scrapeModule(module.AnalogOutput,
-				c.ReadHoldingRegisters, config.AnalogOutput)
-			if err != nil {
-				return []metric{}, fmt.Errorf("[%s:%s] %s",
-					module.Name, config.AnalogOutput.String(), err)
-			}
-			metrics = append(metrics, ms...)
-		}
-	}
-
-	// TODO: Register the metrics.
-
-	return metrics, nil
-}
-
-func scrapeModule(definitions []config.MetricDef, f modbusFunc, t config.RegType) ([]metric, error) {
+func scrapeModule(definitions []config.MetricDef, f modbusFunc) ([]metric, error) {
 	metrics := []metric{}
 
 	if len(definitions) == 0 {
@@ -305,7 +208,7 @@ func scrapeModule(definitions []config.MetricDef, f modbusFunc, t config.RegType
 	}
 
 	for _, definition := range definitions {
-		m, err := scrapeMetric(definition, f, t)
+		m, err := scrapeMetric(definition, f)
 		if err != nil {
 			return []metric{}, fmt.Errorf("metric '%v', address '%v': %v", definition.Name, definition.Address, err)
 		}
@@ -320,7 +223,7 @@ func scrapeModule(definitions []config.MetricDef, f modbusFunc, t config.RegType
 type modbusFunc func(address, quantity uint16) ([]byte, error)
 
 // scrapeMetric returns the list of values from a target
-func scrapeMetric(definition config.MetricDef, f modbusFunc, t config.RegType) (metric, error) {
+func scrapeMetric(definition config.MetricDef, f modbusFunc) (metric, error) {
 	// For now we are not caching any results, thus we can request the
 	// minimum necessary amount of registers per request. Our biggest data type
 	// is float32, thereby 2 registers are enough. For future reference, the

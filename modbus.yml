@@ -1,7 +1,7 @@
 modules:
   - name: "fake"
-    protocol: "tcp/ip"
     id: 1
+    protocol: 'tcp/ip'
     analogIn:
       - name: "power_consumption_total"
         help: "represents the overall power consumption by phase"

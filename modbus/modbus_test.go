@@ -73,7 +73,6 @@ func TestGetModbusData(t *testing.T) {
 		name         string
 		registers    []config.MetricDef
 		registerData func() []byte
-		registerType config.RegType
 		expect       []float64
 	}{
 		{
@@ -95,8 +94,7 @@ func TestGetModbusData(t *testing.T) {
 
 				return b
 			},
-			registerType: config.AnalogInput,
-			expect:       []float64{240},
+			expect: []float64{240},
 		},
 
 		{
@@ -126,8 +124,7 @@ func TestGetModbusData(t *testing.T) {
 
 				return b
 			},
-			registerType: config.AnalogOutput,
-			expect:       []float64{2, 299},
+			expect: []float64{2, 299},
 		},
 	}
 
@@ -141,7 +138,6 @@ func TestGetModbusData(t *testing.T) {
 					// `(register-1)`: byte slice is zero indexed, registers are not.
 					return test.registerData()[(address-1)*2 : (address-1)*2+quantity*2], nil
 				},
-				test.registerType,
 			)
 
 			if err != nil {

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 )
 
@@ -58,99 +57,5 @@ func TestModuleValidate(t *testing.T) {
 	err := m.validate()
 	if err == nil {
 		t.Fatal("expected validation to fail with invalid modbus protocol")
-	}
-}
-
-func TestCheckPort(t *testing.T) {
-	tests := []struct {
-		input         string
-		protocol      ModbusProtocol
-		expectedError error
-	}{
-		{
-			"localhost:8080",
-			ModbusProtocolTCPIP,
-			nil,
-		},
-		{
-			"192.168.0.23:8080",
-			ModbusProtocolTCPIP,
-			nil,
-		},
-		{
-			"192.168.0.3333.043",
-			"",
-			&ModbusProtocolValidationError{},
-		},
-		{":7070", "", &ModbusProtocolValidationError{}},
-		{"300.34.23.2:6767", "", &ModbusProtocolValidationError{}},
-		{"/dev/ttyS4sw34", "", &ModbusProtocolValidationError{}},
-		{"/dev", "", &ModbusProtocolValidationError{}},
-		{"/dev/ttyUSB0", ModbusProtocolSerial, nil},
-		{"/dev/ttyS0", ModbusProtocolSerial, nil},
-	}
-	for i, loopTest := range tests {
-		test := loopTest
-
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			protocol, err := CheckPortTarget(test.input)
-
-			if test.expectedError == nil {
-				if test.protocol != protocol {
-					t.Fatalf("expected protocol %v but got %v", test.protocol, protocol)
-				}
-
-				if err != nil {
-					t.Fatalf("expected no error but got %v", err)
-				}
-
-				return
-			}
-		})
-	}
-}
-
-func TestValidate(t *testing.T) {
-	var (
-		targetsBad = [...]Module{
-			{Parity: "abc"},
-			{Parity: "N"},
-			{Stopbits: 4},
-			{Baudrate: -1},
-			{Databits: 50},
-			{Baudrate: -1},
-		}
-		regDefTest = []MetricDef{
-			{
-				Name:       "test",
-				Address:    34,
-				DataType:   "int16",
-				MetricType: MetricTypeCounter,
-			},
-		}
-		targetsGood = [...]Module{
-			{DigitalOutput: regDefTest, Protocol: ModbusProtocolTCPIP},
-		}
-	)
-
-	for _, s := range targetsGood {
-		if err := s.validate(); err != nil {
-			t.Errorf("validation of %v expected to pass but received the error:\n"+
-				"%s", s.PrettyString(), err)
-		}
-	}
-	for _, s := range targetsBad {
-		if err := s.validate(); err == nil {
-			t.Errorf("validation of %v expected to fail but it didn't.",
-				s.PrettyString())
-		}
-	}
-}
-
-func BenchmarkPrettyPrint(b *testing.B) {
-	s := Module{Parity: "O", Stopbits: 1, Databits: 7}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		s.PrettyString()
 	}
 }
