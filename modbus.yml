@@ -1,15 +1,35 @@
 modules:
+
+    # Module name, needs to be passed as parameter by Prometheus.
   - name: "fake"
+    # Unit identifier e.g. when using a Modbus gateway.
     id: 1
     protocol: 'tcp/ip'
+    # Also called *Read Coil Status*.
+    digitalOut:
+
+    # Also called *Read Input Status*.
+    digitalIn:
+
+    # Also called *Read Holding Register or function code *3*.
+    analogOut:
+
+    # Also called *Read Input Register*.
     analogIn:
+
+        # Name of the metric.
       - name: "power_consumption_total"
+        # Help text of the metric.
         help: "represents the overall power consumption by phase"
+        # Labels to be added to the time series.
         labels:
                 phase: "1"
+        # Modbus address.
         address: 22
         dataType: int16
+        # Prometheus metric type: https://prometheus.io/docs/concepts/metric_types/.
         metricType: counter
+
       - name: "some_gauge"
         help: "some help for some gauge"
         address: 22
