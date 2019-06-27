@@ -7,11 +7,4 @@ env:
         - GO111MODULE=on
 
 script:
-        # Make sure /vendor is in sync.
-        - go mod tidy && go mod vendor && git diff --exit-code
-
-        - make lint
-
-        - go install
-
-        - make test
+        -  make && git diff --exit-code

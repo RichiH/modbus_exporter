@@ -1,11 +1,13 @@
 # Modbus exporter
-Exporter which retrieves stats from a modbus tcp system and exports them via HTTP for Prometheus consumption.
+
+Prometheus exporter which retrieves stats from a modbus tcp system and exports
+them via HTTP for Prometheus consumption.
 
 
 ## Building
 
 ```bash
-go build
+make build
 ```
 
 
@@ -17,23 +19,23 @@ To run it:
 ./modbus_exporter [flags]
 ```
 
-The configuration will be taken from a configuration file, the exporter will search for a file called `modbus.yml` in the same directory by default.
+Supported flags:
 
-Setting a different file and a different listen address:
-```bash
-./modbus_exporter -config.file="path/to/file" -modbus-listen-address=":8080"
+[embedmd]:# (help.txt)
+```txt
+Usage of ./modbus_exporter:
+  -config.file string
+    	Sets the configuration file. (default "modbus.yml")
+  -modbus-listen-address string
+    	The address to listen on for HTTP requests exposing modbus metrics. (default ":9010")
+  -telemetry-listen-address string
+    	The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself. (default ":9011")
 ```
-
-Help on flags:
-
-```bash
-./modbus_exporter --help
-```
-
 
 ## Configuration File
 
-Check the `examples/` folder to read the information about the configuration file and some examples.
+Check out [`modbus.yml`](/modbus.yml) for more details on the configuration file
+format.
 
 
 ## TODO
@@ -42,11 +44,8 @@ Check the `examples/` folder to read the information about the configuration fil
 
 - Revisit bit parsing.
 
-- Introduce metric type 'gauge', 'counter' in config yaml.
-
-- Make metric name and labels configurable per metric definition.
-
 
 ---
 
-Support for serial modbus was dropped in git commit d06573828793094fd2bdf3e7c5d072e7a4fd381b.
+Support for serial modbus was dropped in git commit
+d06573828793094fd2bdf3e7c5d072e7a4fd381b.
