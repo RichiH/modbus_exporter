@@ -2,8 +2,6 @@ modules:
 
     # Module name, needs to be passed as parameter by Prometheus.
   - name: "fake"
-    # Unit identifier e.g. when using a Modbus gateway.
-    id: 1
     protocol: 'tcp/ip'
     # Also called *Read Coil Status*.
     digitalOut:

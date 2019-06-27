@@ -47,7 +47,7 @@ func (e *Exporter) GetConfig() *config.Config {
 
 // Scrape scrapes the given target via TCP based on the configuration of the
 // specified module returning a Prometheus gatherer with the resulting metrics.
-func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer, error) {
+func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName string) (prometheus.Gatherer, error) {
 	reg := prometheus.NewRegistry()
 	metrics := []metric{}
 
@@ -61,7 +61,7 @@ func (e *Exporter) Scrape(targetAddress, moduleName string) (prometheus.Gatherer
 	if module.Timeout != 0 {
 		handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
 	}
-	handler.SlaveId = module.ID
+	handler.SlaveId = subTarget
 	if err := handler.Connect(); err != nil {
 		return nil, fmt.Errorf("unable to connect with target %s via module %s",
 			targetAddress, module.Name)

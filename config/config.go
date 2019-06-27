@@ -99,7 +99,6 @@ type Module struct {
 	Databits      int            `yaml:"databits"`
 	Stopbits      int            `yaml:"stopbits"`
 	Parity        string         `yaml:"parity"`
-	ID            byte           `yaml:"id"`
 	KeepAlive     bool           `yaml:"keepAlive"`
 	DigitalInput  []MetricDef    `yaml:"digitalIn"`
 	DigitalOutput []MetricDef    `yaml:"digitalOut"`

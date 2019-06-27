@@ -40,6 +40,21 @@ func TestScrapeHandler(t *testing.T) {
 			params: map[string]string{"module": "my_module"},
 		},
 		{
+			name: "no sub_target",
+			code: http.StatusBadRequest,
+			config: func() config.Config {
+				c := config.Config{}
+				c.Modules = []config.Module{
+					{
+						Name: "my_module",
+					},
+				}
+
+				return c
+			},
+			params: map[string]string{"module": "my_module", "target": "10.0.0.10"},
+		},
+		{
 			name: "module and target",
 			// The exporter won't be able to access the target,
 			// thus, validation should pass (no 400) but scrape should
@@ -55,7 +70,7 @@ func TestScrapeHandler(t *testing.T) {
 
 				return c
 			},
-			params: map[string]string{"module": "my_module", "target": "test123"},
+			params: map[string]string{"module": "my_module", "target": "10.0.0.10", "sub_target": "10"},
 		},
 	}
 
