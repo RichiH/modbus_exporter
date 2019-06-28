@@ -49,7 +49,6 @@ func (e *Exporter) GetConfig() *config.Config {
 // specified module returning a Prometheus gatherer with the resulting metrics.
 func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName string) (prometheus.Gatherer, error) {
 	reg := prometheus.NewRegistry()
-	metrics := []metric{}
 
 	module := e.config.GetModule(moduleName)
 	if module == nil {
@@ -70,43 +69,9 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 	// TODO: Should we reuse this?
 	c := modbus.NewClient(handler)
 
-	if len(module.DigitalInput) != 0 {
-		ms, err := scrapeModule(module.DigitalInput,
-			c.ReadDiscreteInputs)
-		if err != nil {
-			return nil, fmt.Errorf("[%s:%s] %s",
-				module.Name, config.DigitalInput.String(), err)
-		}
-		metrics = append(metrics, ms...)
-
-	}
-	if len(module.DigitalOutput) != 0 {
-		ms, err := scrapeModule(module.DigitalOutput,
-			c.ReadCoils)
-		if err != nil {
-			return nil, fmt.Errorf("[%s:%s] %s",
-				module.Name, config.DigitalOutput.String(), err)
-		}
-		metrics = append(metrics, ms...)
-	}
-	if len(module.AnalogInput) != 0 {
-		ms, err := scrapeModule(module.AnalogInput,
-			c.ReadInputRegisters)
-		if err != nil {
-			return nil, fmt.Errorf("[%s:%s] %s",
-				module.Name, config.AnalogInput.String(), err)
-		}
-		metrics = append(metrics, ms...)
-	}
-
-	if len(module.AnalogOutput) != 0 {
-		ms, err := scrapeModule(module.AnalogOutput,
-			c.ReadHoldingRegisters)
-		if err != nil {
-			return nil, fmt.Errorf("[%s:%s] %s",
-				module.Name, config.AnalogOutput.String(), err)
-		}
-		metrics = append(metrics, ms...)
+	metrics, err := scrapeMetrics(module.Metrics, c)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scrape metrics for module '%v': %v", moduleName, err.Error())
 	}
 
 	if err := registerMetrics(reg, moduleName, metrics); err != nil {
@@ -200,7 +165,7 @@ func keys(m map[string]string) []string {
 	return keys
 }
 
-func scrapeModule(definitions []config.MetricDef, f modbusFunc) ([]metric, error) {
+func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, error) {
 	metrics := []metric{}
 
 	if len(definitions) == 0 {
@@ -208,6 +173,26 @@ func scrapeModule(definitions []config.MetricDef, f modbusFunc) ([]metric, error
 	}
 
 	for _, definition := range definitions {
+		var f modbusFunc
+
+		switch definition.Address / 10000 {
+		case 1:
+			f = c.ReadCoils
+		case 2:
+			f = c.ReadDiscreteInputs
+		case 3:
+			f = c.ReadHoldingRegisters
+		case 4:
+			f = c.ReadInputRegisters
+		default:
+			return []metric{}, fmt.Errorf(
+				"metric: '%v', address '%v': metric address should be within the range of 10000 - 40000."+
+					"'1xxxx' for read coil / digital output, '2xxxx' for read discrete inputs / digital input,"+
+					"'3xxxx' read holding registers / analog output, '4xxxx' read input registers / analog input",
+				definition.Name, definition.Address,
+			)
+		}
+
 		m, err := scrapeMetric(definition, f)
 		if err != nil {
 			return []metric{}, fmt.Errorf("metric '%v', address '%v': %v", definition.Name, definition.Address, err)
@@ -232,7 +217,9 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc) (metric, error) {
 	div := uint16(2)
 
 	// TODO: We could cache the results to not repeat overlapping ones.
-	modBytes, err := f(uint16(definition.Address), div)
+	// Modulo 10000 as the first digit identifies the modbus function code
+	// (1-4).
+	modBytes, err := f(uint16(definition.Address%10000), div)
 	if err != nil {
 		return metric{}, err
 	}

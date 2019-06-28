@@ -48,7 +48,7 @@ func TestModuleValidate(t *testing.T) {
 	m := Module{}
 
 	m.Protocol = "invalid"
-	m.AnalogOutput = []MetricDef{
+	m.Metrics = []MetricDef{
 		{
 			DataType: ModbusInt16,
 		},

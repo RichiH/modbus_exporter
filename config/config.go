@@ -57,53 +57,20 @@ func (c *Config) GetModule(n string) *Module {
 	return nil
 }
 
-// RegType is a helper type to obtain the name of the register types
-type RegType int
-
-const (
-	// DigitalInput identifies the digital input value
-	DigitalInput RegType = iota
-	// DigitalOutput identifies the digital output value
-	DigitalOutput
-	// AnalogInput identifies the analog input value
-	AnalogInput
-	// AnalogOutput identifies the analog output value
-	AnalogOutput
-)
-
-func (r RegType) String() string {
-	var s string
-	switch r {
-	case DigitalInput:
-		s = "DIn"
-	case DigitalOutput:
-		s = "DOut"
-	case AnalogInput:
-		s = "AIn"
-	case AnalogOutput:
-		s = "AOut"
-	}
-	return s
-}
-
 // ListTargets is the list of configurations of the targets from the configuration
 // file.
 type ListTargets map[string]*Module
 
 // Module defines the configuration parameters of a modbus module.
 type Module struct {
-	Name          string         `yaml:"name"`
-	Protocol      ModbusProtocol `yaml:"protocol"`
-	Timeout       int            `yaml:"timeout"`
-	Baudrate      int            `yaml:"baudrate"`
-	Databits      int            `yaml:"databits"`
-	Stopbits      int            `yaml:"stopbits"`
-	Parity        string         `yaml:"parity"`
-	KeepAlive     bool           `yaml:"keepAlive"`
-	DigitalInput  []MetricDef    `yaml:"digitalIn"`
-	DigitalOutput []MetricDef    `yaml:"digitalOut"`
-	AnalogInput   []MetricDef    `yaml:"analogIn"`
-	AnalogOutput  []MetricDef    `yaml:"analogOut"`
+	Name     string         `yaml:"name"`
+	Protocol ModbusProtocol `yaml:"protocol"`
+	Timeout  int            `yaml:"timeout"`
+	Baudrate int            `yaml:"baudrate"`
+	Databits int            `yaml:"databits"`
+	Stopbits int            `yaml:"stopbits"`
+	Parity   string         `yaml:"parity"`
+	Metrics  []MetricDef    `yaml:"metrics"`
 }
 
 // RegisterAddr specifies the register in the possible output of _digital
@@ -251,17 +218,7 @@ func (t *ModbusProtocol) validate() error {
 	return fmt.Errorf("expected one of the following protocols %v but got '%v'", possibleProtocols, *t)
 }
 
-func (s *Module) hasRegisterDefinitions() bool {
-	return len(s.DigitalInput) != 0 || len(s.DigitalOutput) != 0 ||
-		len(s.AnalogInput) != 0 || len(s.AnalogOutput) != 0
-}
-
-// Validate tries to find inconsistencies in the parameters of a Target.
-// The port must be valid. If present:
-// -Baudrate and Timeout must be positive.
-// -Stopbits must be 1 or 2.
-// -Databits must be 5, 6, 7 or 8.
-// -Parity has to be "N", "E" or "O". The use of no parity requires 2 stop bits.
+// Validate tries to find inconsistencies in the parameters of a module.
 func (s *Module) validate() error {
 	var err error
 
@@ -270,16 +227,14 @@ func (s *Module) validate() error {
 	}
 
 	// track that error if we have no register definitions
-	if !s.hasRegisterDefinitions() {
-		noRegErr := fmt.Errorf("no register definition found in target %s", s.Name)
+	if len(s.Metrics) == 0 {
+		noRegErr := fmt.Errorf("no metric definitions found in module %s", s.Name)
 		err = multierror.Append(err, noRegErr)
 	}
 
-	for _, defs := range [][]MetricDef{s.DigitalInput, s.DigitalOutput, s.AnalogInput, s.AnalogOutput} {
-		for _, def := range defs {
-			if err := def.validate(); err != nil {
-				return fmt.Errorf("failed to validate target %v: %v", s.Name, err)
-			}
+	for _, def := range s.Metrics {
+		if err := def.validate(); err != nil {
+			return fmt.Errorf("failed to validate module %v: %v", s.Name, err)
 		}
 	}
 
