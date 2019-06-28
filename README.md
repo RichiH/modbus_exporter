@@ -31,7 +31,7 @@ Usage of ./modbus_exporter:
   -config.file string
     	Sets the configuration file. (default "modbus.yml")
   -modbus-listen-address string
-    	The address to listen on for HTTP requests exposing modbus metrics. (default ":9010")
+    	The address to listen on for HTTP requests exposing modbus metrics. (default ":9602")
   -telemetry-listen-address string
     	The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself. (default ":9011")
 ```

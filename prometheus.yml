@@ -13,4 +13,4 @@ scrape_configs:
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: 127.0.0.1:9010  # The modbus exporter's real hostname:port.
+        replacement: 127.0.0.1:9602  # The modbus exporter's real hostname:port.

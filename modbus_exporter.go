@@ -30,16 +30,14 @@ import (
 	"github.com/lupoDharkael/modbus_exporter/modbus"
 )
 
-var (
-	modbusAddress = flag.String("modbus-listen-address", ":9010",
-		"The address to listen on for HTTP requests exposing modbus metrics.")
-	telemetryAddress = flag.String("telemetry-listen-address", ":9011",
-		"The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself.")
-	configFile = flag.String("config.file", "modbus.yml",
-		"Sets the configuration file.")
-)
-
 func main() {
+	modbusAddress := flag.String("modbus-listen-address", ":9602",
+		"The address to listen on for HTTP requests exposing modbus metrics.")
+	telemetryAddress := flag.String("telemetry-listen-address", ":9011",
+		"The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself.")
+	configFile := flag.String("config.file", "modbus.yml",
+		"Sets the configuration file.")
+
 	flag.Parse()
 
 	telemetryRegistry := prometheus.NewRegistry()
