@@ -7,6 +7,7 @@ scrape_configs:
         - 127.0.0.1:1502  # Modbus device.
     params:
       module: ["fake"]
+      sub_target: ["1"] # Modbus unit identifier, e.g. when using Modbus TCP as a gateway.
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

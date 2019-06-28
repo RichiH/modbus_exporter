@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -93,9 +94,21 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Infof("got scrape request for module '%v' and target '%v'", moduleName, target)
+	sT := r.URL.Query().Get("sub_target")
+	if sT == "" {
+		http.Error(w, "'subTarget' parameter must be specified", http.StatusBadRequest)
+		return
+	}
 
-	gatherer, err := e.Scrape(target, moduleName)
+	subTarget, err := strconv.Atoi(sT)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("'subTarget' parameter must be a valid integer: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	log.Infof("got scrape request for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+
+	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
 	if err != nil {
 		http.Error(
 			w,
