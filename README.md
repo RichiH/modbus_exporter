@@ -13,7 +13,7 @@ them via HTTP for Prometheus consumption.
  ```
 Note right of Prometheus: promehteus.yml \n --- \n target: Modbus-TCP-10.0.0.5 \n subtarget: Modbus-Unit-10 \n module: VendorXY
 Prometheus->Exporter: http://xxx.de/metrics?target=10.0.0.5&subtarget=10&module=vendorxy
-Note right of Exporter: modbus.yml \n --- \n module: VendorXY \n - temperature_a: 400001 \n - temperature_b: 400002
+Note right of Exporter: modbus.yml \n --- \n module: VendorXY \n - temperature_a: 40001 \n - temperature_b: 40002
 
 Exporter->Modbus_TCP_10.0.0.5: tcp://10.0.0.5?unit=10&register=40001
 Modbus_TCP_10.0.0.5->Modbus_RTU_10: rtu://_?register=40001
@@ -77,6 +77,8 @@ format.
 - Rework logging.
 
 - Revisit bit parsing.
+
+- Print name, version, ... on exporter startup.
 
 
 ---
