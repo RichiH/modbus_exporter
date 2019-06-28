@@ -13,7 +13,7 @@ all: vendor build test lint
 .PHONY: build
 build: modbus_exporter README.md
 
-modbus_exporter:
+modbus_exporter: $(shell find -name "*.go" | grep -v vendor)
 	$(GO) build
 
 README.md: help.txt $(EMBEDMD_BIN)
