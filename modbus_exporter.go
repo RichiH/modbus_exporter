@@ -55,12 +55,10 @@ func main() {
 		telemetryEndpoint(telemetryRegistry, *telemetryAddress)
 	}()
 
-	exporter := modbus.NewExporter(config)
-
 	router := http.NewServeMux()
 	router.Handle("/metrics",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			scrapeHandler(exporter, w, r)
+			scrapeHandler(config, w, r)
 		}),
 	)
 
@@ -76,14 +74,15 @@ func telemetryEndpoint(registry prometheus.Gatherer, address string) {
 	log.Fatal(http.ListenAndServe(address, router))
 }
 
-func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
+func scrapeHandler(c config.Config, w http.ResponseWriter, r *http.Request) {
 	moduleName := r.URL.Query().Get("module")
 	if moduleName == "" {
 		http.Error(w, "'module' parameter must be specified", http.StatusBadRequest)
 		return
 	}
 
-	if !e.GetConfig().HasModule(moduleName) {
+	module := c.GetModule(moduleName)
+	if module == nil {
 		http.Error(w, fmt.Sprintf("module '%v' not defined in configuration file", moduleName), http.StatusBadRequest)
 		return
 	}
@@ -108,16 +107,11 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
 
 	log.Infof("got scrape request for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
 
-	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
-	if err != nil {
-		http.Error(
-			w,
-			fmt.Sprintf("failed to scrape target '%v' with module '%v': %v", target, moduleName, err),
-			http.StatusInternalServerError,
-		)
-		log.Error(err)
-		return
-	}
+	registry := prometheus.NewRegistry()
 
-	promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}).ServeHTTP(w, r)
+	registry.MustRegister(modbus.NewCollector(target, byte(subTarget), *module))
+
+	handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+
+	handler.ServeHTTP(w, r)
 }

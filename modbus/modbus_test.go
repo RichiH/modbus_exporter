@@ -11,19 +11,17 @@ import (
 
 func TestRegisterMetrics(t *testing.T) {
 	t.Run("does not fail", func(t *testing.T) {
-		reg := prometheus.NewRegistry()
 		moduleName := "my_module"
 		metrics := []metric{}
 
-		if err := registerMetrics(reg, moduleName, metrics); err != nil {
+		if err := putMetrics(make(chan prometheus.Metric), moduleName, metrics); err != nil {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("registers metrics with same name and same label keys", func(t *testing.T) {
-		reg := prometheus.NewRegistry()
 		moduleName := "my_module"
-		metrics := []metric{
+		exporterMetrics := []metric{
 			{
 				Name: "my_metric",
 				Help: "my_help",
@@ -46,24 +44,21 @@ func TestRegisterMetrics(t *testing.T) {
 			},
 		}
 
-		if err := registerMetrics(reg, moduleName, metrics); err != nil {
+		ch := make(chan prometheus.Metric, 2)
+
+		if err := putMetrics(ch, moduleName, exporterMetrics); err != nil {
 			t.Fatal(err)
 		}
 
-		metricFamilies, err := reg.Gather()
-		if err != nil {
-			t.Fatal(err)
+		close(ch)
+
+		metrics := []prometheus.Metric{}
+		for m := range ch {
+			metrics = append(metrics, m)
 		}
 
-		if len(metricFamilies) != 1 {
-			t.Fatalf("expected %v but got %v", 1, len(metricFamilies))
-		}
-
-		for _, m := range metricFamilies {
-			metrics := m.Metric
-			if len(metrics) != 2 {
-				t.Fatalf("expected %v metrics but got %v", 2, len(metrics))
-			}
+		if len(metrics) != 2 {
+			t.Fatalf("expected %v metrics but got %v", 2, len(metrics))
 		}
 	})
 }
@@ -176,11 +171,10 @@ func TestParseModbusDataFloat32(t *testing.T) {
 // registered metric in case there is a second one with the same name instead of
 // reregistering which would cause an exception.
 func TestRegisterMetricTwoMetricsSameName(t *testing.T) {
-	reg := prometheus.NewRegistry()
 	a := metric{"my_metric", "", map[string]string{}, 1, config.MetricTypeCounter}
 	b := metric{"my_metric", "", map[string]string{}, 1, config.MetricTypeCounter}
 
-	err := registerMetrics(reg, "my_module", []metric{a, b})
+	err := putMetrics(make(chan prometheus.Metric, 2), "my_module", []metric{a, b})
 	if err != nil {
 		t.Fatalf("expected no error but got: %v", err)
 	}
@@ -189,10 +183,9 @@ func TestRegisterMetricTwoMetricsSameName(t *testing.T) {
 // TestRegisterMetricsRecoverNegativeCounter makes sure the function properly
 // recovers from a prometheus client library panic on negative counter changes.
 func TestRegisterMetricsRecoverNegativeCounter(t *testing.T) {
-	reg := prometheus.NewRegistry()
 	a := metric{"my_metric", "", map[string]string{"key1": "value1", "key2": "value2"}, -1, config.MetricTypeCounter}
 
-	err := registerMetrics(reg, "my_module", []metric{a})
+	err := putMetrics(make(chan prometheus.Metric, 1), "my_module", []metric{a})
 	if err == nil {
 		t.Fatal("expected an error but got nil")
 	}

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/lupoDharkael/modbus_exporter/config"
-	"github.com/lupoDharkael/modbus_exporter/modbus"
 )
 
 func TestScrapeHandler(t *testing.T) {
@@ -79,8 +78,6 @@ func TestScrapeHandler(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 			config := test.config()
-			exporter := modbus.NewExporter(config)
-
 			req, err := http.NewRequest("GET", "/metrics", nil)
 			if err != nil {
 				t.Fatal(err)
@@ -94,7 +91,7 @@ func TestScrapeHandler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			scrapeHandler(exporter, rr, req)
+			scrapeHandler(config, rr, req)
 
 			if status := rr.Code; status != test.code {
 				t.Errorf(

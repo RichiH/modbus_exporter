@@ -25,144 +25,111 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 
 	"github.com/goburrow/modbus"
 	"github.com/lupoDharkael/modbus_exporter/config"
 )
 
-// Exporter represents a Prometheus exporter converting modbus information
+// Collector represents a Prometheus exporter converting modbus information
 // retrieved from remote targets via TCP as Prometheus style metrics.
-type Exporter struct {
-	config config.Config
+type Collector struct {
+	target    string
+	subTarget byte
+	module    config.Module
 }
 
 // NewExporter returns a new modbus exporter.
-func NewExporter(config config.Config) *Exporter {
-	return &Exporter{config}
+func NewCollector(target string, subTarget byte, module config.Module) *Collector {
+	return &Collector{target, subTarget, module}
 }
 
-func (e *Exporter) GetConfig() *config.Config {
-	return &e.config
+// Describe implements Prometheus.Collector.
+func (c Collector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- prometheus.NewDesc("dummy", "dummy", nil, nil)
 }
 
-// Scrape scrapes the given target via TCP based on the configuration of the
+// Collect scrapes the given target via TCP based on the configuration of the
 // specified module returning a Prometheus gatherer with the resulting metrics.
-func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName string) (prometheus.Gatherer, error) {
-	reg := prometheus.NewRegistry()
-
-	module := e.config.GetModule(moduleName)
-	if module == nil {
-		return nil, fmt.Errorf("failed to find '%v' in config", moduleName)
-	}
+func (c Collector) Collect(ch chan<- prometheus.Metric) {
 
 	// TODO: We should probably be reusing these, right?
-	handler := modbus.NewTCPClientHandler(targetAddress)
-	if module.Timeout != 0 {
-		handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
+	handler := modbus.NewTCPClientHandler(c.target)
+	if c.module.Timeout != 0 {
+		handler.Timeout = time.Duration(c.module.Timeout) * time.Millisecond
 	}
-	handler.SlaveId = subTarget
+	handler.SlaveId = c.subTarget
 	if err := handler.Connect(); err != nil {
-		return nil, fmt.Errorf("unable to connect with target %s via module %s",
-			targetAddress, module.Name)
+		err = fmt.Errorf("unable to connect with target %s via module %s",
+			c.target, c.module.Name)
+		log.Error(err)
+		ch <- prometheus.NewInvalidMetric(prometheus.NewDesc("modbus_error", err.Error(), nil, nil), err)
 	}
 
 	// TODO: Should we reuse this?
-	c := modbus.NewClient(handler)
+	client := modbus.NewClient(handler)
 
-	metrics, err := scrapeMetrics(module.Metrics, c)
+	metrics, err := scrapeMetrics(c.module.Metrics, client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to scrape metrics for module '%v': %v", moduleName, err.Error())
+		err = fmt.Errorf("failed to scrape metrics for module '%v': %v", c.module.Name, err.Error())
+		log.Error(err)
+		ch <- prometheus.NewInvalidMetric(prometheus.NewDesc("modbus_error", err.Error(), nil, nil), err)
 	}
 
-	if err := registerMetrics(reg, moduleName, metrics); err != nil {
-		return nil, fmt.Errorf("failed to register metrics for module %v: %v", moduleName, err.Error())
+	if err := putMetrics(ch, c.module.Name, metrics); err != nil {
+		err := fmt.Errorf("failed to register metrics for module %v: %v", c.module.Name, err.Error())
+		log.Error(err)
+		ch <- prometheus.NewInvalidMetric(prometheus.NewDesc("modbus_error", err.Error(), nil, nil), err)
 	}
-
-	return reg, nil
 }
 
-func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []metric) error {
-	registeredGauges := map[string]*prometheus.GaugeVec{}
-	registeredCounters := map[string]*prometheus.CounterVec{}
+func keys(labels map[string]string) []string {
+	keys := []string{}
+	for k := range labels {
+		keys = append(keys, k)
+	}
 
+	return keys
+}
+
+func values(labels map[string]string) []string {
+	values := []string{}
+	for _, v := range labels {
+		values = append(values, v)
+	}
+
+	return values
+}
+
+func putMetrics(ch chan<- prometheus.Metric, moduleName string, metrics []metric) error {
 	for _, m := range metrics {
 		if m.Labels == nil {
 			m.Labels = map[string]string{}
 		}
 		m.Labels["module"] = moduleName
 
+		desc := prometheus.NewDesc(m.Name, m.Help, keys(m.Labels), prometheus.Labels{})
+
+		var metricType prometheus.ValueType
 		switch m.MetricType {
 		case config.MetricTypeGauge:
-			// Make sure not to register the same metric twice.
-			collector, ok := registeredGauges[m.Name]
-
-			if !ok {
-				collector = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-					Name: m.Name,
-					Help: m.Help,
-				}, keys(m.Labels))
-
-				if err := reg.Register(collector); err != nil {
-					return fmt.Errorf("failed to register metric %v: %v", m.Name, err.Error())
-				}
-
-				registeredGauges[m.Name] = collector
-			}
-
-			collector.With(m.Labels).Set(m.Value)
+			metricType = prometheus.GaugeValue
 		case config.MetricTypeCounter:
-			// Make sure not to register the same metric twice.
-			collector, ok := registeredCounters[m.Name]
-
-			if !ok {
-				collector = prometheus.NewCounterVec(prometheus.CounterOpts{
-					Name: m.Name,
-					Help: m.Help,
-				}, keys(m.Labels))
-
-				if err := reg.Register(collector); err != nil {
-					return fmt.Errorf("failed to register metric %v: %v", m.Name, err.Error())
-				}
-
-				registeredCounters[m.Name] = collector
+			if m.Value < 0 {
+				return fmt.Errorf("metric '%v': counter can not be negative, got '%v'", m.Name, m.Value)
 			}
-
-			// Prometheus client library panics among other things
-			// if the counter value is negative. The below construct
-			// recovers from such panic and properly returns the error
-			// with meta data attached.
-			var err error
-
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						err = r.(error)
-					}
-				}()
-
-				collector.With(m.Labels).Add(m.Value)
-			}()
-
-			if err != nil {
-				return fmt.Errorf(
-					"metric '%v', type '%v', value '%v', labels '%v': %v",
-					m.Name, m.MetricType, m.Value, m.Labels, err,
-				)
-			}
+			metricType = prometheus.CounterValue
 		}
 
+		metric, err := prometheus.NewConstMetric(desc, metricType, m.Value, values(m.Labels)...)
+		if err != nil {
+			return fmt.Errorf("failed to create metric %v: %v", m.Name, err.Error())
+		}
+
+		ch <- metric
 	}
 
 	return nil
-}
-
-func keys(m map[string]string) []string {
-	keys := []string{}
-	for k := range m {
-		keys = append(keys, k)
-	}
-
-	return keys
 }
 
 func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, error) {
