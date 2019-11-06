@@ -81,8 +81,15 @@ format.
 - Print name, version, ... on exporter startup.
 
 
----
+# Misc info
 
+## ModBus RTU
 
-Support for serial modbus was dropped in git commit
-d06573828793094fd2bdf3e7c5d072e7a4fd381b.
+Support for serial ModBus (RTU) was dropped in git commit d06573828793094fd2bdf3e7c5d072e7a4fd381b.
+Please send a PR if you need it again.
+For now, we suggest using a ModBus PLC/bridge/master to bridge from RTU into TCP.
+
+## Forking information
+
+This is forked from https://github.com/lupoDharkael/modbus_exporter which was not maintained any more.
+Initially, development happened in https://github.com/mxinden/modbus_exporter which has now been retired in favour of https://github.com/RichiH/modbus_exporter .
