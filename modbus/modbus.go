@@ -68,6 +68,9 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 
 	// TODO: Should we reuse this?
 	c := modbus.NewClient(handler)
+	
+	// Close tcp connection.
+	defer handler.Close()
 
 	metrics, err := scrapeMetrics(module.Metrics, c)
 	if err != nil {
