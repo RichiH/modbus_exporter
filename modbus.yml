@@ -15,9 +15,9 @@ modules:
         address: 30022
         # Datatypes allowed: bool, int16, uint16, float16, float32
         dataType: int16
-        # Endianities allowed: little, big, mixed, yolo 
-        # Optional. If not defined: big_endian.
-        endianity: big
+        # Endianness allowed: big, little, mixed, yolo 
+        # Optional. If not defined: big.
+        endianness: big
         # Prometheus metric type: https://prometheus.io/docs/concepts/metric_types/.
         metricType: counter
 

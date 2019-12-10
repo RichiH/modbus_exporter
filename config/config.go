@@ -100,7 +100,9 @@ func (t *ModbusDataType) validate() error {
 		}
 	}
 
-	return fmt.Errorf("expected one of the following data types %v but got '%v'", possibleModbusDataTypes, *t)
+	return fmt.Errorf("expected one of the following data types %v but got '%v'",
+		possibleModbusDataTypes,
+		*t)
 }
 
 const (
@@ -109,6 +111,39 @@ const (
 	ModbusInt16   ModbusDataType = "int16"
 	ModbusUInt16  ModbusDataType = "uint16"
 	ModbusBool    ModbusDataType = "bool"
+)
+
+// EndiannessType is an Enum, representing the possible endianness types a register
+// value can have.
+type EndiannessType string
+
+func (endianness *EndiannessType) validate() error {
+	possibleEndiannessTypes := []EndiannessType{
+		EndiannessBigEndian,
+		EndiannessLittleEndian,
+		EndiannessMixedEndian,
+		EndiannessYolo,
+	}
+
+	for _, possibleEndianness := range possibleEndiannessTypes {
+		if *endianness == possibleEndianness {
+			return nil
+		}
+	}
+	return fmt.Errorf("expected one of the following endianness types %v but got '%v'",
+		possibleEndiannessTypes,
+		*endianness)
+}
+
+const (
+	// EndiannessBigEndian (1 2 3 4)
+	EndiannessBigEndian EndiannessType = "big"
+	// EndiannessLittleEndian (4 3 2 1)
+	EndiannessLittleEndian EndiannessType = "little"
+	// EndiannessMixedEndian (2 1 4 3)
+	EndiannessMixedEndian EndiannessType = "mixed"
+	// EndiannessYolo (3 4 1 2)
+	EndiannessYolo EndiannessType = "yolo"
 )
 
 // MetricType specifies the Prometheus metric type, see
@@ -131,7 +166,9 @@ func (t *MetricType) validate() error {
 		}
 	}
 
-	return fmt.Errorf("expected one of the following metric types %v but got '%v'", possibleMetricTypes, *t)
+	return fmt.Errorf("expected one of the following metric types %v but got '%v'",
+		possibleMetricTypes,
+		*t)
 }
 
 const (
@@ -155,6 +192,8 @@ type MetricDef struct {
 
 	DataType ModbusDataType `yaml:"dataType"`
 
+	Endianness EndiannessType `yaml:"endianness,omitempty"`
+
 	// Bit offset within the input register to parse. Only valid for boolean data
 	// type. The two bytes of a register are interpreted in network order (big
 	// endianness). Boolean is determined via `register&(1<<offset)>0`.
@@ -176,6 +215,12 @@ func (d *MetricDef) validate() error {
 	// TODO: Does it have to be used with bools though? Or should there be a default?
 	if d.BitOffset != nil && d.DataType != ModbusBool {
 		return fmt.Errorf("bitPosition can only be used with boolean data type")
+	}
+
+	if d.Endianness != "" {
+		if err := d.Endianness.validate(); err != nil {
+			return fmt.Errorf("invalid endianness definition %v: %v", d.Name, err)
+		}
 	}
 
 	return nil
@@ -215,7 +260,9 @@ func (t *ModbusProtocol) validate() error {
 		}
 	}
 
-	return fmt.Errorf("expected one of the following protocols %v but got '%v'", possibleProtocols, *t)
+	return fmt.Errorf("expected one of the following protocols %v but got '%v'",
+		possibleProtocols,
+		*t)
 }
 
 // Validate tries to find inconsistencies in the parameters of a module.
