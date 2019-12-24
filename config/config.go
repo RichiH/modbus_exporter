@@ -83,11 +83,16 @@ type ModbusDataType string
 
 func (t *ModbusDataType) validate() error {
 	possibleModbusDataTypes := []ModbusDataType{
-		ModbusFloat16,
-		ModbusFloat32,
+		ModbusBool,
 		ModbusInt16,
 		ModbusUInt16,
-		ModbusBool,
+		ModbusFloat16,
+		ModbusInt32,
+		ModbusUInt32,
+		ModbusFloat32,
+		ModbusInt64,
+		ModbusUInt64,
+		ModbusFloat64,
 	}
 
 	if t == nil {
@@ -106,13 +111,16 @@ func (t *ModbusDataType) validate() error {
 }
 
 const (
+	ModbusBool    ModbusDataType = "bool"
 	ModbusFloat16 ModbusDataType = "float16"
-	ModbusFloat32 ModbusDataType = "float32"
 	ModbusInt16   ModbusDataType = "int16"
 	ModbusUInt16  ModbusDataType = "uint16"
 	ModbusInt32   ModbusDataType = "int32"
 	ModbusUInt32  ModbusDataType = "uint32"
-	ModbusBool    ModbusDataType = "bool"
+	ModbusFloat32 ModbusDataType = "float32"
+	ModbusInt64   ModbusDataType = "int64"
+	ModbusUInt64  ModbusDataType = "uint64"
+	ModbusFloat64 ModbusDataType = "float64"
 )
 
 // EndiannessType is an Enum, representing the possible endianness types a register
