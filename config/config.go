@@ -221,6 +221,8 @@ func (d *MetricDef) validate() error {
 		if err := d.Endianness.validate(); err != nil {
 			return fmt.Errorf("invalid endianness definition %v: %v", d.Name, err)
 		}
+	} else {
+		d.Endianness = "big"
 	}
 
 	return nil

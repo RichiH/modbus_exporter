@@ -117,6 +117,82 @@ func TestParseModbusData(t *testing.T) {
 			},
 			expectedValue: 1,
 		},
+		{
+			name: "int16, default endian (big endian)",
+			input: func() []byte {
+				return []byte{uint8(0), uint8(1)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType: config.ModbusInt16,
+				}
+			},
+			expectedValue: 1,
+		},
+		{
+			name: "int16, Big endian",
+			input: func() []byte {
+				return []byte{uint8(0), uint8(1)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType:   config.ModbusInt16,
+					Endianness: config.EndiannessBigEndian,
+				}
+			},
+			expectedValue: 1,
+		},
+		{
+			name: "int16, Little endian",
+			input: func() []byte {
+				return []byte{uint8(1), uint8(0)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType:   config.ModbusInt16,
+					Endianness: config.EndiannessLittleEndian,
+				}
+			},
+			expectedValue: 1,
+		},
+		{
+			name: "uint16, default endian (big endian)",
+			input: func() []byte {
+				return []byte{uint8(0), uint8(1)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType: config.ModbusUInt16,
+				}
+			},
+			expectedValue: 1,
+		},
+		{
+			name: "uint16, Big endian",
+			input: func() []byte {
+				return []byte{uint8(0), uint8(1)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType:   config.ModbusUInt16,
+					Endianness: config.EndiannessBigEndian,
+				}
+			},
+			expectedValue: 1,
+		},
+		{
+			name: "uint16, Little endian",
+			input: func() []byte {
+				return []byte{uint8(1), uint8(0)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType:   config.ModbusUInt16,
+					Endianness: config.EndiannessLittleEndian,
+				}
+			},
+			expectedValue: 1,
+		},
 	}
 
 	for _, loopTest := range tests {
