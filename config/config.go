@@ -110,6 +110,8 @@ const (
 	ModbusFloat32 ModbusDataType = "float32"
 	ModbusInt16   ModbusDataType = "int16"
 	ModbusUInt16  ModbusDataType = "uint16"
+	ModbusInt32   ModbusDataType = "int32"
+	ModbusUInt32  ModbusDataType = "uint32"
 	ModbusBool    ModbusDataType = "bool"
 )
 
@@ -222,7 +224,7 @@ func (d *MetricDef) validate() error {
 			return fmt.Errorf("invalid endianness definition %v: %v", d.Name, err)
 		}
 	} else {
-		d.Endianness = "big"
+		d.Endianness = EndiannessBigEndian
 	}
 
 	return nil
