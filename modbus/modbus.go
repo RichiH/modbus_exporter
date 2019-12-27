@@ -41,6 +41,7 @@ func NewExporter(config config.Config) *Exporter {
 	return &Exporter{config}
 }
 
+// GetConfig loads the config file
 func (e *Exporter) GetConfig() *config.Config {
 	return &e.config
 }
@@ -213,11 +214,23 @@ type modbusFunc func(address, quantity uint16) ([]byte, error)
 // scrapeMetric returns the list of values from a target
 func scrapeMetric(definition config.MetricDef, f modbusFunc) (metric, error) {
 	// For now we are not caching any results, thus we can request the
-	// minimum necessary amount of registers per request. Our biggest data type
-	// is float32, thereby 2 registers are enough. For future reference, the
-	// maximum for digital in/output is 2000 registers, the maximum for analog
-	// in/output is 125.
-	div := uint16(2)
+	// minimum necessary amount of registers per request dependint in the dataType.
+	// For future reference, the maximum for digital in/output is 2000 registers,
+	// the maximum for analog in/output is 125.
+	var div uint16
+	switch definition.DataType {
+	case config.ModbusFloat16,
+		config.ModbusInt16,
+		config.ModbusUInt16:
+		div = uint16(1)
+	case config.ModbusFloat32,
+		config.ModbusInt32,
+		config.ModbusUInt32,
+		config.ModbusBool:
+		div = uint16(2)
+	default:
+		div = uint16(4)
+	}
 
 	// TODO: We could cache the results to not repeat overlapping ones.
 	// Modulo 10000 as the first digit identifies the modbus function code
@@ -252,32 +265,6 @@ func (e *InsufficientRegistersError) Error() string {
 // TODO: Handle Endianness.
 func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	switch d.DataType {
-	case config.ModbusFloat16:
-		if len(rawData) < 2 {
-			return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
-		}
-		panic("implement")
-	case config.ModbusFloat32:
-		if len(rawData) < 4 {
-			return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 2, got %v", len(rawData))}
-		}
-		return float64(math.Float32frombits(binary.BigEndian.Uint32(rawData[:4]))), nil
-	case config.ModbusInt16:
-		{
-			if len(rawData) < 2 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
-			}
-			i := binary.BigEndian.Uint16(rawData)
-			return float64(int16(i)), nil
-		}
-	case config.ModbusUInt16:
-		{
-			if len(rawData) < 2 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
-			}
-			i := binary.BigEndian.Uint16(rawData)
-			return float64(i), nil
-		}
 	case config.ModbusBool:
 		{
 			// TODO: Maybe we don't need two registers for bool.
@@ -296,7 +283,222 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 			}
 			return float64(0), nil
 		}
+	case config.ModbusFloat16:
+		{
+			if len(rawData) != 2 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 1, got %v", len(rawData))}
+			}
+			panic("implement")
+		}
+	case config.ModbusInt16:
+		{
+			if len(rawData) != 2 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 1, got %v", len(rawData))}
+			}
+			rawDataWithEndianness, err := convertEndianness16b(d.Endianness, rawData)
+			if err != nil {
+				return float64(0), err
+			}
+			data := binary.BigEndian.Uint16(rawDataWithEndianness)
+			return float64(int16(data)), nil
+		}
+	case config.ModbusUInt16:
+		{
+			if len(rawData) != 2 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 1, got %v", len(rawData))}
+			}
+			rawDataWithEndianness, err := convertEndianness16b(d.Endianness, rawData)
+			if err != nil {
+				return float64(0), err
+			}
+			data := binary.BigEndian.Uint16(rawDataWithEndianness)
+			return float64(data), nil
+		}
+	case config.ModbusInt32:
+		{
+			if len(rawData) != 4 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 2, got %v", len(rawData))}
+			}
+			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
+			if err != nil {
+				return float64(0), err
+			}
+			data := binary.BigEndian.Uint32(rawDataWithEndianness)
+			return float64(int32(data)), nil
+		}
+	case config.ModbusUInt32:
+		{
+			if len(rawData) != 4 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 2, got %v", len(rawData))}
+			}
+			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
+			if err != nil {
+				return float64(0), err
+			}
+			data := binary.BigEndian.Uint32(rawDataWithEndianness)
+			return float64(data), nil
+		}
+	case config.ModbusFloat32:
+		{
+			if len(rawData) != 4 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 2, got %v", len(rawData))}
+			}
+			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
+			if err != nil {
+				return float64(0), err
+			}
+			data := binary.BigEndian.Uint32(rawDataWithEndianness)
+			return float64(math.Float32frombits(data)), nil
+		}
+	case config.ModbusInt64:
+		{
+			if len(rawData) != 8 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4, got %v", len(rawData))}
+			}
+			rawDataWithEndianness, err := convertEndianness64b(d.Endianness, rawData)
+			if err != nil {
+				return float64(0), err
+			}
+			data := binary.BigEndian.Uint64(rawDataWithEndianness)
+			return float64(int64(data)), nil
+		}
+	case config.ModbusUInt64:
+		{
+			if len(rawData) != 8 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4, got %v", len(rawData))}
+			}
+			rawDataWithEndianness, err := convertEndianness64b(d.Endianness, rawData)
+			if err != nil {
+				return float64(0), err
+			}
+			data := binary.BigEndian.Uint64(rawDataWithEndianness)
+			return float64(data), nil
+		}
+	case config.ModbusFloat64:
+		{
+			if len(rawData) != 8 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4, got %v", len(rawData))}
+			}
+			rawDataWithEndianness, err := convertEndianness64b(d.Endianness, rawData)
+			if err != nil {
+				return float64(0), err
+			}
+			data := binary.BigEndian.Uint64(rawDataWithEndianness)
+			return math.Float64frombits(data), nil
+		}
 	default:
-		return 0, fmt.Errorf("unknown modbus data type")
+		{
+			return 0, fmt.Errorf("unknown modbus data type")
+		}
 	}
+}
+
+// Converts an array of 16 bits from an endianness to the default big Endian
+func convertEndianness16b(rawEndianness config.EndiannessType, rawData []byte) ([]byte, error) {
+	if len(rawData) != 2 {
+		return []byte{uint8(0), uint8(0)}, fmt.Errorf("expected 2 bytes, got %v", len(rawData))
+	}
+	var data []byte
+	switch rawEndianness {
+	case config.EndiannessLittleEndian:
+		data = []byte{
+			rawData[1],
+			rawData[0]}
+	// default: BigEndian
+	default:
+		data = []byte{
+			rawData[0],
+			rawData[1]}
+	}
+	return data, nil
+}
+
+// Converts an array of 32 bits from an endianness to the default big Endian
+func convertEndianness32b(rawEndianness config.EndiannessType, rawData []byte) ([]byte, error) {
+	if len(rawData) != 4 {
+		return []byte{uint8(0), uint8(0), uint8(0), uint8(0)},
+			fmt.Errorf("expected 4 bytes, got %v", len(rawData))
+	}
+	var data []byte
+	switch rawEndianness {
+	case config.EndiannessLittleEndian:
+		data = []byte{
+			rawData[3],
+			rawData[2],
+			rawData[1],
+			rawData[0]}
+	case config.EndiannessMixedEndian:
+		data = []byte{
+			rawData[1],
+			rawData[0],
+			rawData[3],
+			rawData[2]}
+	case config.EndiannessYolo:
+		data = []byte{
+			rawData[2],
+			rawData[3],
+			rawData[0],
+			rawData[1]}
+	// default: BigEndian
+	default:
+		data = []byte{
+			rawData[0],
+			rawData[1],
+			rawData[2],
+			rawData[3]}
+	}
+	return data, nil
+}
+
+// Converts an array of 64 bits from an endianness to the default big Endian
+func convertEndianness64b(rawEndianness config.EndiannessType, rawData []byte) ([]byte, error) {
+	if len(rawData) != 8 {
+		return []byte{uint8(0), uint8(0), uint8(0), uint8(0), uint8(0), uint8(0), uint8(0), uint8(0)},
+			fmt.Errorf("expected 8 bytes, got %v", len(rawData))
+	}
+	var data []byte
+	switch rawEndianness {
+	case config.EndiannessLittleEndian:
+		data = []byte{
+			rawData[7],
+			rawData[6],
+			rawData[5],
+			rawData[4],
+			rawData[3],
+			rawData[2],
+			rawData[1],
+			rawData[0]}
+	case config.EndiannessMixedEndian:
+		data = []byte{
+			rawData[1],
+			rawData[0],
+			rawData[3],
+			rawData[2],
+			rawData[5],
+			rawData[4],
+			rawData[7],
+			rawData[6]}
+	case config.EndiannessYolo:
+		data = []byte{
+			rawData[6],
+			rawData[7],
+			rawData[4],
+			rawData[5],
+			rawData[2],
+			rawData[3],
+			rawData[0],
+			rawData[1]}
+	// default: BigEndian
+	default:
+		data = []byte{
+			rawData[0],
+			rawData[1],
+			rawData[2],
+			rawData[3],
+			rawData[4],
+			rawData[5],
+			rawData[6],
+			rawData[7]}
+	}
+	return data, nil
 }
