@@ -13,7 +13,8 @@ modules:
           phase: "1"
         # Register address.
         address: 30022
-        # Datatypes allowed: bool, int16, uint16, float16, float32
+        # Datatypes allowed: bool, int16, uint16, int32, uint32, 
+        # int64, uint64, float16 (not implemented), float32, float64
         dataType: int16
         # Endianness allowed: big, little, mixed, yolo 
         # Optional. If not defined: big.
