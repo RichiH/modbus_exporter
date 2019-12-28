@@ -62,9 +62,11 @@ Usage of ./modbus_exporter:
   -modbus-listen-address string
     	The address to listen on for HTTP requests exposing modbus metrics. (default ":9602")
   -telemetry-listen-address string
-    	The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself. (default ":9011")
+    	The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself. (default ":9602")
 ```
+Visit http://localhost:9602/modbus?target=1.2.3.4 where 1.2.3.4 is the IP of the modbus IP device to get metrics from. You can also specify a module and a sub_target parameter, to choose which module and subtarget to use from the config file. 
 
+Visit http://localhost:9602/metrics to get the metrics of the exporter itself.
 
 ## Configuration File
 

@@ -34,7 +34,7 @@ import (
 func main() {
 	modbusAddress := flag.String("modbus-listen-address", ":9602",
 		"The address to listen on for HTTP requests exposing modbus metrics.")
-	telemetryAddress := flag.String("telemetry-listen-address", ":9011",
+	telemetryAddress := flag.String("telemetry-listen-address", ":9602",
 		"The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself.")
 	configFile := flag.String("config.file", "modbus.yml",
 		"Sets the configuration file.")
@@ -50,15 +50,11 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	go func() {
-		telemetryEndpoint(telemetryRegistry, *telemetryAddress)
-	}()
-
-	exporter := modbus.NewExporter(config)
-
 	router := http.NewServeMux()
-	router.Handle("/metrics",
+	router.Handle("/metrics", promhttp.HandlerFor(telemetryRegistry, promhttp.HandlerOpts{}))
+	log.Infoln("telemetry metrics at: " + *telemetryAddress)
+	exporter := modbus.NewExporter(config)
+	router.Handle("/modbus",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			scrapeHandler(exporter, w, r)
 		}),
@@ -66,14 +62,6 @@ func main() {
 
 	log.Infoln("Modbus metrics at: " + *modbusAddress)
 	log.Fatal(http.ListenAndServe(*modbusAddress, router))
-}
-
-func telemetryEndpoint(registry prometheus.Gatherer, address string) {
-	router := http.NewServeMux()
-	router.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
-
-	log.Infoln("telemetry metrics at: " + address)
-	log.Fatal(http.ListenAndServe(address, router))
 }
 
 func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
