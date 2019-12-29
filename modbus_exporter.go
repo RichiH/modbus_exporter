@@ -37,11 +37,11 @@ import (
 type ModbusRequestStatusType string
 
 const (
-	// ModbusRequestStatusOK sucessful
+	// ModbusRequestStatusOK successful
 	ModbusRequestStatusOK ModbusRequestStatusType = "OK"
 	// ModbusRequestStatusErrorSock error opening socket connection
 	ModbusRequestStatusErrorSock ModbusRequestStatusType = "ERROR_SOCKET"
-	// ModbusRequestStatusErrorTimeout connection stablished but no response from modbus device
+	// ModbusRequestStatusErrorTimeout connection established but no response from modbus device
 	ModbusRequestStatusErrorTimeout ModbusRequestStatusType = "ERROR_TIMEOUT"
 	// ModbusRequestStatusErrorParsingValue error parsing value received
 	ModbusRequestStatusErrorParsingValue ModbusRequestStatusType = "ERROR_PARSING_VALUE"
