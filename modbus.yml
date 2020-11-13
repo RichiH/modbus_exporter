@@ -26,3 +26,10 @@ modules:
         address: 30023
         dataType: int16
         metricType: gauge
+
+      - name: "coil"
+        help: "some help for some coil"
+        address: 10024
+        dataType: bool
+        bitOffset: 0
+        metricType: gauge

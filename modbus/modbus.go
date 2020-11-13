@@ -69,7 +69,7 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 
 	// TODO: Should we reuse this?
 	c := modbus.NewClient(handler)
-	
+
 	// Close tcp connection.
 	defer handler.Close()
 
@@ -221,12 +221,12 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc) (metric, error) {
 	switch definition.DataType {
 	case config.ModbusFloat16,
 		config.ModbusInt16,
+		config.ModbusBool,
 		config.ModbusUInt16:
 		div = uint16(1)
 	case config.ModbusFloat32,
 		config.ModbusInt32,
-		config.ModbusUInt32,
-		config.ModbusBool:
+		config.ModbusUInt32:
 		div = uint16(2)
 	default:
 		div = uint16(4)
@@ -267,16 +267,12 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	switch d.DataType {
 	case config.ModbusBool:
 		{
-			// TODO: Maybe we don't need two registers for bool.
-			if len(rawData) < 2 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
-			}
-
 			if d.BitOffset == nil {
 				return float64(0), fmt.Errorf("expected bit position on boolean data type")
 			}
 
-			data := binary.BigEndian.Uint16(rawData)
+			// Convert byte to uint16
+			data := uint16(rawData[0])
 
 			if data&(uint16(1)<<uint16(*d.BitOffset)) > 0 {
 				return float64(1), nil
