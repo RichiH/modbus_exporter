@@ -13,6 +13,7 @@ func main() {
 	serv := mbserver.NewServer()
 	serv.HoldingRegisters[22] = uint16(240)
 	serv.HoldingRegisters[23] = uint16(250)
+	serv.Coils[24] = byte(1)
 	err := serv.ListenTCP(address)
 	if err != nil {
 		log.Printf("%v\n", err)
