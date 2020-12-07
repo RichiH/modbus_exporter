@@ -20,12 +20,17 @@ modules:
         endianness: big
         # Prometheus metric type: https://prometheus.io/docs/concepts/metric_types/.
         metricType: counter
+        # Factor can be specified to represent metric value.
+        # Examples: 1, 2, 1.543 etc
+        # Optional.
+        factor: 3.1415926535
 
       - name: "some_gauge"
         help: "some help for some gauge"
         address: 30023
         dataType: int16
         metricType: gauge
+        factor: 2
 
       - name: "coil"
         help: "some help for some coil"

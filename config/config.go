@@ -210,6 +210,9 @@ type MetricDef struct {
 	BitOffset *int `yaml:"bitOffset,omitempty"`
 
 	MetricType MetricType `yaml:"metricType"`
+
+	// Scaling factor
+	Factor *float64 `yaml:"factor,omitempty"`
 }
 
 // Validate semantically validates the given metric definition.
@@ -233,6 +236,14 @@ func (d *MetricDef) validate() error {
 		}
 	} else {
 		d.Endianness = EndiannessBigEndian
+	}
+
+	if d.Factor != nil && d.DataType == ModbusBool {
+		return fmt.Errorf("factor cannot be used with boolean data type")
+	}
+
+	if d.Factor != nil && *d.Factor == 0.0 {
+		return fmt.Errorf("factor cannot be 0")
 	}
 
 	return nil
