@@ -75,7 +75,7 @@ type Module struct {
 
 // RegisterAddr specifies the register in the possible output of _digital
 // output_, _digital input, _ananlog input, _analog output_.
-type RegisterAddr uint16
+type RegisterAddr uint32
 
 // ModbusDataType is an Enum, representing the possible data types a register
 // value can be interpreted as.
