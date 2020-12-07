@@ -12,7 +12,7 @@ modules:
         labels:
           phase: "1"
         # Register address.
-        address: 30022
+        address: 300022
         # Datatypes allowed: bool, int16, uint16, float16, float32
         dataType: int16
         # Endianness allowed: big, little, mixed, yolo 
@@ -27,14 +27,14 @@ modules:
 
       - name: "some_gauge"
         help: "some help for some gauge"
-        address: 30023
+        address: 300023
         dataType: int16
         metricType: gauge
         factor: 2
 
       - name: "coil"
         help: "some help for some coil"
-        address: 10024
+        address: 100024
         dataType: bool
         bitOffset: 0
         metricType: gauge
