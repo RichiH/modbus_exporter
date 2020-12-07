@@ -69,7 +69,7 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 
 	// TODO: Should we reuse this?
 	c := modbus.NewClient(handler)
-	
+
 	// Close tcp connection.
 	defer handler.Close()
 
@@ -179,7 +179,7 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, e
 	for _, definition := range definitions {
 		var f modbusFunc
 
-		switch definition.Address / 10000 {
+		switch definition.Address / 100000 {
 		case 1:
 			f = c.ReadCoils
 		case 2:
@@ -221,12 +221,12 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc) (metric, error) {
 	switch definition.DataType {
 	case config.ModbusFloat16,
 		config.ModbusInt16,
+		config.ModbusBool,
 		config.ModbusUInt16:
 		div = uint16(1)
 	case config.ModbusFloat32,
 		config.ModbusInt32,
-		config.ModbusUInt32,
-		config.ModbusBool:
+		config.ModbusUInt32:
 		div = uint16(2)
 	default:
 		div = uint16(4)
@@ -235,7 +235,7 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc) (metric, error) {
 	// TODO: We could cache the results to not repeat overlapping ones.
 	// Modulo 10000 as the first digit identifies the modbus function code
 	// (1-4).
-	modBytes, err := f(uint16(definition.Address%10000), div)
+	modBytes, err := f(uint16(definition.Address%100000), div)
 	if err != nil {
 		return metric{}, err
 	}
@@ -267,16 +267,12 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	switch d.DataType {
 	case config.ModbusBool:
 		{
-			// TODO: Maybe we don't need two registers for bool.
-			if len(rawData) < 2 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected at least 1, got %v", len(rawData))}
-			}
-
 			if d.BitOffset == nil {
 				return float64(0), fmt.Errorf("expected bit position on boolean data type")
 			}
 
-			data := binary.BigEndian.Uint16(rawData)
+			// Convert byte to uint16
+			data := uint16(rawData[0])
 
 			if data&(uint16(1)<<uint16(*d.BitOffset)) > 0 {
 				return float64(1), nil
@@ -300,7 +296,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint16(rawDataWithEndianness)
-			return float64(int16(data)), nil
+			return scaleValue(d.Factor, float64(int16(data))), nil
 		}
 	case config.ModbusUInt16:
 		{
@@ -312,7 +308,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint16(rawDataWithEndianness)
-			return float64(data), nil
+			return scaleValue(d.Factor, float64(data)), nil
 		}
 	case config.ModbusInt32:
 		{
@@ -324,7 +320,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return float64(int32(data)), nil
+			return scaleValue(d.Factor, float64(int32(data))), nil
 		}
 	case config.ModbusUInt32:
 		{
@@ -336,7 +332,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return float64(data), nil
+			return scaleValue(d.Factor, float64(data)), nil
 		}
 	case config.ModbusFloat32:
 		{
@@ -348,7 +344,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return float64(math.Float32frombits(data)), nil
+			return scaleValue(d.Factor, float64(math.Float32frombits(data))), nil
 		}
 	case config.ModbusInt64:
 		{
@@ -360,7 +356,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return float64(int64(data)), nil
+			return scaleValue(d.Factor, float64(int64(data))), nil
 		}
 	case config.ModbusUInt64:
 		{
@@ -372,7 +368,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return float64(data), nil
+			return scaleValue(d.Factor, float64(data)), nil
 		}
 	case config.ModbusFloat64:
 		{
@@ -384,13 +380,21 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return math.Float64frombits(data), nil
+			return scaleValue(d.Factor, math.Float64frombits(data)), nil
 		}
 	default:
 		{
 			return 0, fmt.Errorf("unknown modbus data type")
 		}
 	}
+}
+
+// Scales value by factor
+func scaleValue(f *float64, d float64) float64 {
+	if f == nil {
+		return d
+	}
+	return (d * float64(*f))
 }
 
 // Converts an array of 16 bits from an endianness to the default big Endian
