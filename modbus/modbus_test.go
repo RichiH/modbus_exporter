@@ -81,7 +81,7 @@ func TestParseModbusData(t *testing.T) {
 		{
 			name: "bool, no bit",
 			input: func() []byte {
-				return []byte{uint8(0), uint8(0)}
+				return []byte{uint8(0)}
 			},
 			metricDef: func() *config.MetricDef {
 				return &config.MetricDef{
@@ -94,7 +94,7 @@ func TestParseModbusData(t *testing.T) {
 		{
 			name: "bool, first bit",
 			input: func() []byte {
-				return []byte{uint8(0), uint8(1)}
+				return []byte{uint8(1)}
 			},
 			metricDef: func() *config.MetricDef {
 				return &config.MetricDef{
@@ -107,7 +107,7 @@ func TestParseModbusData(t *testing.T) {
 		{
 			name: "bool, second bit",
 			input: func() []byte {
-				return []byte{uint8(0), uint8(2)}
+				return []byte{uint8(2)}
 			},
 			metricDef: func() *config.MetricDef {
 				return &config.MetricDef{

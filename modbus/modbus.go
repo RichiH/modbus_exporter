@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -179,7 +180,25 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, e
 	for _, definition := range definitions {
 		var f modbusFunc
 
-		switch definition.Address / 100000 {
+		// Here we are parcing Modbus Address from config file
+		// for function code and register address
+		modFunction, err := strconv.ParseUint(fmt.Sprint(definition.Address)[0:1], 10, 64)
+		if err != nil {
+			return []metric{}, fmt.Errorf("modbus function code parcing failed: %v", modFunction)
+		}
+
+		// And here we are parcing Modbus Address from config file
+		// for register address
+		modAddress, err := strconv.ParseUint(fmt.Sprint(definition.Address)[1:], 10, 64)
+		if err != nil {
+			return []metric{}, fmt.Errorf("modbus register address parcing failed  %v", modAddress)
+		}
+
+		if modAddress > 65535 {
+			return []metric{}, fmt.Errorf("modbus register address is out of range: %v", definition.Address)
+		}
+
+		switch modFunction {
 		case 1:
 			f = c.ReadCoils
 		case 2:
@@ -190,14 +209,14 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, e
 			f = c.ReadInputRegisters
 		default:
 			return []metric{}, fmt.Errorf(
-				"metric: '%v', address '%v': metric address should be within the range of 10000 - 40000."+
-					"'1xxxx' for read coil / digital output, '2xxxx' for read discrete inputs / digital input,"+
-					"'3xxxx' read holding registers / analog output, '4xxxx' read input registers / analog input",
+				"metric: '%v', address '%v': metric address should be within the range of 10 - 465535."+
+					"'1xxxxx' for read coil / digital output, '2xxxxx' for read discrete inputs / digital input,"+
+					"'3xxxxx' read holding registers / analog output, '4xxxxx' read input registers / analog input",
 				definition.Name, definition.Address,
 			)
 		}
 
-		m, err := scrapeMetric(definition, f)
+		m, err := scrapeMetric(definition, f, modAddress)
 		if err != nil {
 			return []metric{}, fmt.Errorf("metric '%v', address '%v': %v", definition.Name, definition.Address, err)
 		}
@@ -212,7 +231,7 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, e
 type modbusFunc func(address, quantity uint16) ([]byte, error)
 
 // scrapeMetric returns the list of values from a target
-func scrapeMetric(definition config.MetricDef, f modbusFunc) (metric, error) {
+func scrapeMetric(definition config.MetricDef, f modbusFunc, modAddress uint64) (metric, error) {
 	// For now we are not caching any results, thus we can request the
 	// minimum necessary amount of registers per request dependint in the dataType.
 	// For future reference, the maximum for digital in/output is 2000 registers,
@@ -233,9 +252,8 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc) (metric, error) {
 	}
 
 	// TODO: We could cache the results to not repeat overlapping ones.
-	// Modulo 10000 as the first digit identifies the modbus function code
-	// (1-4).
-	modBytes, err := f(uint16(definition.Address%100000), div)
+
+	modBytes, err := f(uint16(modAddress), div)
 	if err != nil {
 		return metric{}, err
 	}

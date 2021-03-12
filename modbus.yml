@@ -15,7 +15,7 @@ modules:
         address: 300022
         # Datatypes allowed: bool, int16, uint16, float16, float32
         dataType: int16
-        # Endianness allowed: big, little, mixed, yolo 
+        # Endianness allowed: big, little, mixed, yolo
         # Optional. If not defined: big.
         endianness: big
         # Prometheus metric type: https://prometheus.io/docs/concepts/metric_types/.
@@ -27,14 +27,14 @@ modules:
 
       - name: "some_gauge"
         help: "some help for some gauge"
-        address: 300023
+        address: 30023
         dataType: int16
         metricType: gauge
         factor: 2
 
       - name: "coil"
         help: "some help for some coil"
-        address: 100024
+        address: 124
         dataType: bool
         bitOffset: 0
         metricType: gauge

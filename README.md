@@ -7,21 +7,21 @@ them via HTTP for Prometheus consumption.
 
 <details>
  <summary>Reproduce diagram</summary>
- 
+
  Go to: https://bramp.github.io/js-sequence-diagrams/
- 
+
  ```
 Note right of Prometheus: promehteus.yml \n --- \n target: Modbus-TCP-10.0.0.5 \n subtarget: Modbus-Unit-10 \n module: VendorXY
 Prometheus->Exporter: http://xxx.de/metrics?target=10.0.0.5&subtarget=10&module=vendorxy
-Note right of Exporter: modbus.yml \n --- \n module: VendorXY \n - temperature_a: 40001 \n - temperature_b: 40002
+Note right of Exporter: modbus.yml \n --- \n module: VendorXY \n - temperature_a: 400001 \n - temperature_b: 400002
 
-Exporter->Modbus_TCP_10.0.0.5: tcp://10.0.0.5?unit=10&register=40001
-Modbus_TCP_10.0.0.5->Modbus_RTU_10: rtu://_?register=40001
+Exporter->Modbus_TCP_10.0.0.5: tcp://10.0.0.5?unit=10&register=400001
+Modbus_TCP_10.0.0.5->Modbus_RTU_10: rtu://_?register=400001
 Modbus_RTU_10-->Modbus_TCP_10.0.0.5: value=20
 Modbus_TCP_10.0.0.5-->Exporter: value=20
 
-Exporter->Modbus_TCP_10.0.0.5: tcp://10.0.0.5?unit=10&register=40002
-Modbus_TCP_10.0.0.5->Modbus_RTU_10: rtu://_?register=40002
+Exporter->Modbus_TCP_10.0.0.5: tcp://10.0.0.5?unit=10&register=400002
+Modbus_TCP_10.0.0.5->Modbus_RTU_10: rtu://_?register=400002
 Modbus_RTU_10-->Modbus_TCP_10.0.0.5: value=19
 Modbus_TCP_10.0.0.5-->Exporter: value=19
 
@@ -64,7 +64,7 @@ Usage of ./modbus_exporter:
   -telemetry-listen-address string
     	The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself. (default ":9602")
 ```
-Visit http://localhost:9602/modbus?target=1.2.3.4 where 1.2.3.4 is the IP of the modbus IP device to get metrics from. You can also specify a module and a sub_target parameter, to choose which module and subtarget to use from the config file. 
+Visit http://localhost:9602/modbus?target=1.2.3.4 where 1.2.3.4 is the IP of the modbus IP device to get metrics from. You can also specify a module and a sub_target parameter, to choose which module and subtarget to use from the config file.
 
 Visit http://localhost:9602/metrics to get the metrics of the exporter itself.
 
