@@ -117,13 +117,13 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
 
 	sT := r.URL.Query().Get("sub_target")
 	if sT == "" {
-		http.Error(w, "'subTarget' parameter must be specified", http.StatusBadRequest)
+		http.Error(w, "'sub_target' parameter must be specified", http.StatusBadRequest)
 		return
 	}
 
 	subTarget, err := strconv.Atoi(sT)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("'subTarget' parameter must be a valid integer: %v", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("'sub_target' parameter must be a valid integer: %v", err), http.StatusBadRequest)
 		return
 	}
 
