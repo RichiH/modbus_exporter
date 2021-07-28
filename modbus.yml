@@ -12,8 +12,11 @@ modules:
         labels:
           phase: "1"
         # Register address.
+        # The first digit of the address is the function code
+        # Supported codes are: 1, 2, 3, 4
         address: 300022
-        # Datatypes allowed: bool, int16, uint16, float16, float32
+        # Datatypes allowed: bool, int16, int32, int64, uint16, uint32, uint64,
+        #   float16, float32, float64
         dataType: int16
         # Endianness allowed: big, little, mixed, yolo
         # Optional. If not defined: big.
@@ -21,7 +24,8 @@ modules:
         # Prometheus metric type: https://prometheus.io/docs/concepts/metric_types/.
         metricType: counter
         # Factor can be specified to represent metric value.
-        # Examples: 1, 2, 1.543 etc
+        # Examples: 1, 2, 1.543, 0.01 etc
+        # Factor is multiplied with the scraped value to produce the metric value
         # Optional.
         factor: 3.1415926535
 

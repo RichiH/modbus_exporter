@@ -4,11 +4,15 @@ scrape_configs:
   - job_name: 'modbus'
     static_configs:
       - targets:
+        # The port must be specified, the standard modbus port is 502
         - 127.0.0.1:1502  # Modbus device.
     params:
+      # url parameters, module and sub_target are both required
       module: ["fake"]
       sub_target: ["1"] # Modbus unit identifier, e.g. when using Modbus TCP as a gateway.
     relabel_configs:
+      # Hit the modbus exporter instead of the actual device
+      # Use the target address as the target parameter and instance label
       - source_labels: [__address__]
         target_label: __param_target
       - source_labels: [__param_target]
