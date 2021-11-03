@@ -93,8 +93,8 @@ modules:
         metricType: "gauge"
         factor: 0.1
         endianness: "yolo"
-      - name: "emet1xx_phase_load_dmd_watts"
-        help: "Power draw DMD on the phase in Watts"
+      - name: "emet1xx_load_dmd_watts"
+        help: "Power draw DMD on the meter in Watts"
         labels:
           phase: "L1"
         address: 300010
@@ -106,9 +106,9 @@ modules:
         help: "Carlo Gavazzi Controls identification code for this meter"
         address: 300011
         dataType: "uint16"
-        metricType: "counter"
-      - name: "emet1xx_phase_dmd_peak_watts"
-        help: "Peak power draw DMD on the phase in Watts"
+        metricType: "gauge"
+      - name: "emet1xx_load_dmd_peak_watts"
+        help: "Peak power draw DMD on the meter in Watts"
         labels:
           phase: "L1"
         address: 300012
@@ -116,20 +116,20 @@ modules:
         metricType: "counter"
         factor: 0.1
         endianness: "yolo"
-      - name: "emet1xx_power_factor"
+      - name: "emet1xx_phase_power_factor"
         help: "Power factor of the phase"
         labels:
           phase: "L1"
         address: 300014
         dataType: "int16"
-        metricType: "counter"
+        metricType: "gauge"
         factor: 0.001
         endianness: "yolo"
       - name: "emet1xx_frequency_hertz"
         help: "Power frequency in Hertz"
         address: 300015
         dataType: "int16"
-        metricType: "counter"
+        metricType: "gauge"
         factor: 0.1
         endianness: "yolo"
       - name: "emet1xx_consumed_kwh_total"
@@ -164,12 +164,12 @@ modules:
         help: "The firmware version of this meter"
         address: 300770
         dataType: "uint16"
-        metricType: "counter"
+        metricType: "gauge"
       - name: "emet1xx_firmware_revision"
         help: "The firmware revision of this meter"
         address: 300771
         dataType: "uint16"
-        metricType: "counter"
+        metricType: "gauge"
       - name: "emet1xx_password"
         help: "The password for this meter"
         address: 304096
@@ -202,6 +202,425 @@ modules:
         dataType: "uint16"
         metricType: "gauge"
       - name: "emet1xx_serial_stop_bit"
+        help: "The Modbus RS485 serial stop bit count for this meter"
+        address: 308195
+        dataType: "uint16"
+        metricType: "gauge"
+  - name: "carlo_gavazzi_em_et_3xx_series"
+    # registers and units from https://gavazzi.se/app/uploads/2020/11/em330_em340_et330_et340_cp.pdf (registers converted from hex to decimal)
+    protocol: 'serial'
+    baudrate: 9600
+    databits: 8
+    parity: "N"
+    stopbits: 1
+    timeout: 2000
+    metrics:
+      - name: "emet3xx_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L1"
+          reference: "N"
+        address: 300000
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L2"
+          reference: "N"
+        address: 300002
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L3"
+          reference: "N"
+        address: 300004
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L1"
+          reference: "L2"
+        address: 300006
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L2"
+          reference: "L3"
+        address: 300008
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L3"
+          reference: "L1"
+        address: 300010
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_identification_code"
+        help: "Carlo Gavazzi Controls identification code for this meter"
+        address: 300011
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "emet3xx_phase_load_amps"
+        help: "Power draw on the phase in Amperes"
+        labels:
+          phase: "L1"
+        address: 300012
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.001
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_amps"
+        help: "Power draw on the phase in Amperes"
+        labels:
+          phase: "L2"
+        address: 300014
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.001
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_amps"
+        help: "Power draw on the phase in Amperes"
+        labels:
+          phase: "L3"
+        address: 300016
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.001
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_watts"
+        help: "Power draw on the phase in Watts"
+        labels:
+          phase: "L1"
+        address: 300018
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_watts"
+        help: "Power draw on the phase in Watts"
+        labels:
+          phase: "L2"
+        address: 300020
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_watts"
+        help: "Power draw on the phase in Watts"
+        labels:
+          phase: "L3"
+        address: 300022
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_va"
+        help: "Power draw on the phase in Volts-Amperes"
+        labels:
+          phase: "L1"
+        address: 300024
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_va"
+        help: "Power draw on the phase in Volts-Amperes"
+        labels:
+          phase: "L2"
+        address: 300026
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_va"
+        help: "Power draw on the phase in Volts-Amperes"
+        labels:
+          phase: "L3"
+        address: 300028
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_var"
+        help: "Power draw on the phase in Volts-Amperes-Reactive"
+        labels:
+          phase: "L1"
+        address: 300030
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_var"
+        help: "Power draw on the phase in Volts-Amperes-Reactive"
+        labels:
+          phase: "L2"
+        address: 300032
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_load_var"
+        help: "Power draw on the phase in Volts-Amperes-Reactive"
+        labels:
+          phase: "L3"
+        address: 300034
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_system_voltage_volts"
+        help: "Average voltage between phase and neutral in this meter"
+        labels:
+          phase: "All"
+          reference: "N"
+        address: 300036
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_system_voltage_volts"
+        help: "Average voltage between phases in this meter"
+        labels:
+          phase: "All"
+          reference: "L"
+        address: 300038
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_system_load_watts"
+        help: "Power draw across the whole meter in Watts"
+        address: 300040
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_system_load_va"
+        help: "Power draw across the whole meter in Volts-Amperes"
+        address: 300042
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_system_load_var"
+        help: "Power draw across the whole meter in Volts-Amperes-Reactive"
+        address: 300044
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_power_factor"
+        help: "Power factor of the phase"
+        labels:
+          phase: "L1"
+        address: 300046
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.001
+      - name: "emet3xx_phase_power_factor"
+        help: "Power factor of the phase"
+        labels:
+          phase: "L2"
+        address: 300047
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.001
+      - name: "emet3xx_phase_power_factor"
+        help: "Power factor of the phase"
+        labels:
+          phase: "L3"
+        address: 300048
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.001
+      - name: "emet3xx_system_power_factor"
+        help: "Power factor across the whole meter"
+        address: 300049
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.001
+      - name: "emet3xx_installation_phase_sequence"
+        help: "The order of the phases as installed in this meter (-1=L1-L3-L2 and 0=L1,L2,L3)"
+        address: 300050
+        dataType: "int16"
+        metricType: "gauge"
+      - name: "emet3xx_frequency_hertz"
+        help: "Power frequency in Hertz"
+        address: 300051
+        dataType: "int16"
+        metricType: "gauge"
+      - name: "emet3xx_consumed_kwh_total"
+        help: "Total kwh consumed on this meter"
+        address: 300052
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_consumed_kvarh_total"
+        help: "Total kvarh consumed on this meter"
+        address: 300054
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_load_dmd_watts"
+        help: "Power draw DMD on the meter in Watts"
+        address: 300056
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_load_dmd_peak_watts"
+        help: "Peak power draw DMD on the meter in Watts"
+        address: 300058
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_consumed_kwh_partial_total"
+        help: "Total partial kwh consumed on this meter"
+        address: 300060
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_consumed_kvarh_partial_total"
+        help: "Total partial kvarh consumed on this meter"
+        address: 300062
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_consumed_kwh_total"
+        help: "Total kwh consumed on this phase"
+        labels:
+          phase: "L1"
+        address: 300064
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_consumed_kwh_total"
+        help: "Total kwh consumed on this phase"
+        labels:
+          phase: "L2"
+        address: 300066
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_consumed_kwh_total"
+        help: "Total kwh consumed on this phase"
+        labels:
+          phase: "L3"
+        address: 300068
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_produced_kwh_total"
+        help: "Total kwh produced on this meter"
+        address: 300078
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_produced_kvarh_total"
+        help: "Total kvarh produced on this meter"
+        address: 300080
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_produced_kwh_total"
+        help: "Total kwh produced on this phase"
+        labels:
+          phase: "L1"
+        address: 300096
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_produced_kwh_total"
+        help: "Total kwh produced on this phase"
+        labels:
+          phase: "L2"
+        address: 300098
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_phase_produced_kwh_total"
+        help: "Total kwh produced on this phase"
+        labels:
+          phase: "L3"
+        address: 300100
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "emet3xx_firmware_version"
+        help: "The firmware version of this meter"
+        address: 300770
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "emet3xx_firmware_revision"
+        help: "The firmware revision of this meter"
+        address: 300771
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "emet3xx_password"
+        help: "The password for this meter"
+        address: 304096
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "emet3xx_measuring_system"
+        help: "The measuring system for this meter (0=3-phase with neutral, 1=3-phase without neutral, 2=2-phase with neutral, 3=1-phase)"
+        address: 304098
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "emet3xx_dmd_calculation_time_seconds"
+        help: "The DMD calculation time in seconds for this meter (1-30)"
+        address: 304112
+        dataType: "uint32"
+        metricType: "gauge"
+        endianness: "yolo"
+      - name: "emet3xx_modbus_address"
+        help: "The Modbus address for this meter (1-247)"
+        address: 308192
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "emet3xx_serial_baud_rate"
+        help: "The Modbus RS485 serial baud rate setting for this meter (1=9600, 2=19200, 3=38400, 4=57600, 5=115200)"
+        address: 308193
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "emet3xx_serial_parity"
+        help: "The Modbus RS485 serial parity setting for this meter (1=no parity, 2=even parity)"
+        address: 308194
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "emet3xx_serial_stop_bit"
         help: "The Modbus RS485 serial stop bit count for this meter"
         address: 308195
         dataType: "uint16"
