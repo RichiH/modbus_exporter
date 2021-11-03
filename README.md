@@ -1,6 +1,6 @@
 # Modbus exporter
 
-Prometheus exporter which retrieves stats from a modbus tcp system and exports
+Prometheus exporter which retrieves stats from a modbus system and exports
 them via HTTP for Prometheus consumption.
 
 ![Scrape sequence](/scrape-sequence.svg "Scrape sequence")
@@ -84,12 +84,6 @@ format.
 
 
 # Misc info
-
-## ModBus RTU
-
-Support for serial ModBus (RTU) was dropped in git commit d06573828793094fd2bdf3e7c5d072e7a4fd381b.
-Please send a PR if you need it again.
-For now, we suggest using a ModBus PLC/bridge/master to bridge from RTU into TCP.
 
 ## Forking information
 
