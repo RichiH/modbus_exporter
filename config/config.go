@@ -44,7 +44,6 @@ func (c *Config) HasModule(n string) bool {
 // found.
 func (c *Config) GetModule(n string) *Module {
 	for _, m := range c.Modules {
-		m := m
 		if m.Name == n {
 			return &m
 		}
@@ -57,7 +56,11 @@ func (c *Config) GetModule(n string) *Module {
 // file.
 type ListTargets map[string]*Module
 
-// Module defines the configuration parameters of a modbus module.
+// Module defines the configuration parameters of a single module.
+// Parity Values => N (None), E (Even), O (Odd)
+//
+// Default serial settings (inherited from goburrow/serial defaults):
+// Baudrate: 19200, Databits: 8, Parity: E, Stopbits: 1
 type Module struct {
 	Name     string         `yaml:"name"`
 	Protocol ModbusProtocol `yaml:"protocol"`
@@ -251,6 +254,8 @@ type ModbusProtocol string
 const (
 	// ModbusProtocolTCPIP represents modbus via TCP/IP.
 	ModbusProtocolTCPIP = "tcp/ip"
+	// ModbusProtocolSerial represents modbus via Serial.
+	ModbusProtocolSerial = "serial"
 )
 
 // ModbusProtocolValidationError is returned on invalid or unsupported modbus
@@ -267,6 +272,7 @@ func (e *ModbusProtocolValidationError) Error() string {
 func (t *ModbusProtocol) validate() error {
 	possibleProtocols := []ModbusProtocol{
 		ModbusProtocolTCPIP,
+		ModbusProtocolSerial,
 	}
 
 	if t == nil {
@@ -292,6 +298,44 @@ func (s *Module) validate() error {
 		err = multierror.Append(err, protocolErr)
 	}
 
+	switch s.Protocol {
+	case ModbusProtocolSerial:
+		if s.Baudrate < 0 || s.Stopbits < 0 || s.Databits < 0 || s.Timeout < 0 {
+			newErr := fmt.Errorf("invalid negative value in target \"%s\"", s.Name)
+			err = multierror.Append(err, newErr)
+		}
+		// Data bits: default, 5, 6, 7 or 8
+		if s.Databits != 0 && (s.Databits < 5 || s.Databits > 8) {
+			newErr := fmt.Errorf("invalid data bits value in target \"%s\"", s.Name)
+			err = multierror.Append(err, newErr)
+		}
+		// Stop bits: default, 1 or 2
+		if s.Stopbits > 2 {
+			newErr := fmt.Errorf("invalid stop bits value in target \"%s\"", s.Name)
+			err = multierror.Append(err, newErr)
+		}
+		// Parity: N (None), E (Even), O (Odd)
+		if s.Parity != "N" && s.Parity != "E" && s.Parity != "O" &&
+			s.Parity != "" {
+			newErr := fmt.Errorf("invalid parity value in target \"%s\" "+
+				"N (None), E (Even), O (Odd)", s.Name)
+			err = multierror.Append(err, newErr)
+		}
+	// checking the absence of specific parameters for a serial connection
+	case ModbusProtocolTCPIP:
+		if s.Parity != "" || s.Stopbits != 0 || s.Databits != 0 || s.Baudrate != 0 {
+			newErr := fmt.Errorf("invalid argument in target %s, TCP targets don't"+
+				"use Parity, Stopbits, Databits or Baudrate", s.Name)
+			err = multierror.Append(err, newErr)
+		}
+	default:
+		err = multierror.Append(
+			err,
+			fmt.Errorf("expected one of '%v' protocol but got '%v'",
+				[]string{ModbusProtocolTCPIP, ModbusProtocolSerial},
+				s.Protocol,
+			))
+	}
 	// track that error if we have no register definitions
 	if len(s.Metrics) == 0 {
 		noRegErr := fmt.Errorf("no metric definitions found in module %s", s.Name)

@@ -79,6 +79,7 @@ func TestScrapeHandler(t *testing.T) {
 				c.Modules = []config.Module{
 					{
 						Name: "my_module",
+						Protocol: config.ModbusProtocolTCPIP,
 					},
 				}
 
