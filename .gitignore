@@ -18,6 +18,3 @@ modbus_exporter
 
 # Prometheus data directory
 data/
-
-# vim swapfiles
-*.swp

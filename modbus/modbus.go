@@ -313,7 +313,6 @@ func (e *InsufficientRegistersError) Error() string {
 //
 // TODO: Handle Endianness.
 func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
-
 	switch d.DataType {
 	case config.ModbusBool:
 		{

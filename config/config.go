@@ -314,7 +314,7 @@ func (s *Module) validate() error {
 			err = multierror.Append(err, newErr)
 		}
 		// Stop bits: default, 1 or 2
-		if s.Stopbits > 2 {
+		if s.Stopbits < 0 || s.Stopbits > 2 {
 			newErr := fmt.Errorf("invalid stop bits value in target \"%s\"", s.Name)
 			err = multierror.Append(err, newErr)
 		}
