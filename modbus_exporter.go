@@ -19,6 +19,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
@@ -34,6 +36,26 @@ import (
 
 	"github.com/RichiH/modbus_exporter/config"
 	"github.com/RichiH/modbus_exporter/modbus"
+)
+
+// ModbusRequestStatusType possible status of the modbus request
+type ModbusRequestStatusType string
+
+const (
+	// ModbusRequestStatusOK successful
+	ModbusRequestStatusOK ModbusRequestStatusType = "OK"
+	// ModbusRequestStatusErrorSock error opening socket connection
+	ModbusRequestStatusErrorSock ModbusRequestStatusType = "ERROR_SOCKET"
+	// ModbusRequestStatusErrorTimeout connection established but no response from modbus device
+	ModbusRequestStatusErrorTimeout ModbusRequestStatusType = "ERROR_TIMEOUT"
+	// ModbusRequestStatusErrorParsingValue error parsing value received
+	ModbusRequestStatusErrorParsingValue ModbusRequestStatusType = "ERROR_PARSING_VALUE"
+)
+
+var (
+	modbusDurationCounterVec *prometheus.CounterVec
+	modbusRequestsCounterVec *prometheus.CounterVec
+	mutex sync.Mutex
 )
 
 func main() {
@@ -116,9 +138,13 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		return
 	}
 
-	level.Info(logger).Log("msg", "got scrape request", "module", moduleName, "target", target, "sub_target", subTarget)
+	log.Infof("got scrape request for module '%v', target '%v', sub_target '%v'", moduleName, target, subTarget)
 
+	start := time.Now()
+	mutex.Lock()
 	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
+	mutex.Unlock()
+	duration := time.Since(start).Seconds()
 	if err != nil {
 		httpStatus := http.StatusInternalServerError
 		if strings.Contains(fmt.Sprintf("%v", err), "unable to connect with target") {
@@ -128,7 +154,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		}
 		http.Error(
 			w,
-			fmt.Sprintf("failed to scrape target '%v' with module '%v': %v", target, moduleName, err),
+			fmt.Sprintf("failed to scrape target '%v' sub_target '%d' with module '%v': %v", target, subTarget, moduleName, err),
 			httpStatus,
 		)
 		level.Error(logger).Log("msg", "failed to scrape", "target", target, "module", moduleName, "err", err)
