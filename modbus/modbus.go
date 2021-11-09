@@ -75,7 +75,7 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 		c := modbus.NewClient(handler)
 		metrics, err := scrapeMetrics(module.Metrics, c)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scrape metrics for module '%v': %v", moduleName, err.Error())
+			return nil, fmt.Errorf("failed to scrape metrics for module '%v', target '%s', sub_target '%d': %v", moduleName, targetAddress, subTarget, err.Error())
 		}
 		if err := registerMetrics(reg, moduleName, metrics); err != nil {
 			return nil, fmt.Errorf("failed to register metrics for module %v: %v", moduleName, err.Error())
@@ -107,7 +107,7 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 		c := modbus.NewClient(handler)
 		metrics, err := scrapeMetrics(module.Metrics, c)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scrape metrics for module '%v': %v", moduleName, err.Error())
+			return nil, fmt.Errorf("failed to scrape metrics for module '%v', target '%s', sub_target '%d': %v", moduleName, targetAddress, subTarget, err.Error())
 		}
 		if err := registerMetrics(reg, moduleName, metrics); err != nil {
 			return nil, fmt.Errorf("failed to register metrics for module %v: %v", moduleName, err.Error())

@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -50,6 +51,7 @@ const (
 var (
 	modbusDurationCounterVec *prometheus.CounterVec
 	modbusRequestsCounterVec *prometheus.CounterVec
+	mutex sync.Mutex
 )
 
 func main() {
@@ -127,10 +129,12 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Infof("got scrape request for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+	log.Infof("got scrape request for module '%v', target '%v', sub_target '%v'", moduleName, target, subTarget)
 
 	start := time.Now()
+	mutex.Lock()
 	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
+	mutex.Unlock()
 	duration := time.Since(start).Seconds()
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%v", err), "unable to connect with target") {
@@ -142,7 +146,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(
 			w,
-			fmt.Sprintf("failed to scrape target '%v' with module '%v': %v", target, moduleName, err),
+			fmt.Sprintf("failed to scrape target '%v' sub_target '%d' with module '%v': %v", target, subTarget, moduleName, err),
 			http.StatusInternalServerError,
 		)
 		log.Error(err)
