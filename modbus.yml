@@ -438,6 +438,7 @@ modules:
         address: 300051
         dataType: "int16"
         metricType: "gauge"
+        factor: 0.1
       - name: "cagaemet_consumed_kwh_total"
         help: "Total kwh consumed on this meter"
         address: 300052
