@@ -173,7 +173,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 	start := time.Now()
 	if module.Protocol == config.ModbusProtocolSerial {
 		if atomic.LoadUint64(&mutexWaiters) > 0 {
-			log.Infof("Waiting to get mutex lock for serial bus target '%v', sub_target '%d' with module '%v', %d other threads waiting", target, subTarget, moduleName, atomic.LoadUint64(&mutexWaiters))
+			log.Infof("Serial port '%v' is busy, waiting for module '%v' to scrape sub_target '%v' (%d other threads are also waiting).", target, moduleName, subTarget, atomic.LoadUint64(&mutexWaiters))
 		}
 		atomic.AddUint64(&mutexWaiters, 1)
 		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target).Set(float64(mutexWaiters))
