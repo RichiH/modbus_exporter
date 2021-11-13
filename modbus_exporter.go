@@ -51,11 +51,11 @@ const (
 
 var (
 	modbusDurationCounterVec *prometheus.CounterVec
-	modbusMutexDurationCounterVec *prometheus.CounterVec
 	modbusRequestsCounterVec *prometheus.CounterVec
 	mutex sync.Mutex
-	modbusSerialMutexWaitersGaugeVec *prometheus.GaugeVec
 	mutexWaiters uint64 = 0;
+	modbusSerialMutexDurationCounterVec *prometheus.CounterVec
+	modbusSerialMutexWaitersGaugeVec *prometheus.GaugeVec
 )
 
 func main() {
@@ -84,7 +84,7 @@ func main() {
 	}, []string{"target"})
 	telemetryRegistry.MustRegister(modbusMutexDurationCounterVec)
 
-	modbusSerialMutexWaitersGaugeVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+	modbusSerialMutexWaitersGaugeVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "modbus_request_serial_mutex_waiters",
 		Help: "Total number of threads currently waiting for mutex lock by serial bus",
 	}, []string{"target"})
@@ -150,7 +150,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
 	if module.Protocol == config.ModbusProtocolSerial {
 		log.Infof("Trying to get mutex lock for serial bus '%v', %d others waiting...", target, atomic.LoadUint64(&mutexWaiters))
 		atomic.AddUint64(&mutexWaiters, 1)
-		modbusSerialMutexDurationCounterVec.WithLabelValues(target).Set(&mutexWaiters)
+		modbusSerialMutexDurationCounterVec.WithLabelValues(target).Set(float64(&mutexWaiters))
         mutex.Lock()
 		atomic.AddUint64(&mutexWaiters, ^uint64(0))
 		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target).Set(&mutexWaiters)
