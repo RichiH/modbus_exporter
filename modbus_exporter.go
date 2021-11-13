@@ -58,6 +58,7 @@ var (
 	modbusMutexDurationCounterVec *prometheus.CounterVec
 	modbusRequestsCounterVec *prometheus.CounterVec
 	mutex sync.Mutex
+	modbusSerialMutexWaitersGaugeVec *prometheus.GaugeVec
 	mutexWaiters uint64 = 0;
 )
 
@@ -90,11 +91,17 @@ func main() {
 	}, []string{"target"})
 	telemetryRegistry.MustRegister(modbusDurationCounterVec)
 
-	modbusMutexDurationCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "modbus_request_mutex_duration_seconds_total",
+	modbusSerialMutexDurationCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "modbus_request_serial_mutex_duration_seconds_total",
 		Help: "Total duration of waiting for mutex lock for serial bus by target in seconds",
 	}, []string{"target"})
-	telemetryRegistry.MustRegister(modbusDurationCounterVec)
+	telemetryRegistry.MustRegister(modbusMutexDurationCounterVec)
+
+	modbusSerialMutexWaitersGaugeVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "modbus_request_serial_mutex_waiters",
+		Help: "Total number of threads currently waiting for mutex lock by serial bus",
+	}, []string{"target"})
+	telemetryRegistry.MustRegister(modbusSerialMutexWaitersGaugeVec)
 
 	modbusRequestsCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "modbus_requests_total",
@@ -165,10 +172,11 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 	if module.Protocol == config.ModbusProtocolSerial {
 		log.Infof("Trying to get mutex lock for serial bus '%v', %d others waiting...", target, atomic.LoadUint64(&mutexWaiters))
 		atomic.AddUint64(&mutexWaiters, 1)
-		mutex.Lock()
+		modbusSerialMutexDurationCounterVec.WithLabelValues(target).Set(&mutexWaiters)
+        mutex.Lock()
 		atomic.AddUint64(&mutexWaiters, ^uint64(0))
-		mutex_duration := time.Since(start).Seconds()
-		modbusMutexDurationCounterVec.WithLabelValues(target).Add(mutex_duration)
+		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target).Set(&mutexWaiters)
+		modbusSerialMutexDurationCounterVec.WithLabelValues(target).Add(time.Since(start).Seconds())
 	}
 	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
 	if module.Protocol == config.ModbusProtocolSerial {
