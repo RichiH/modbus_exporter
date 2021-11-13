@@ -5,7 +5,8 @@ go 1.19
 require (
 	github.com/alecthomas/kingpin/v2 v2.3.2
 	github.com/go-kit/log v0.2.1
-	github.com/goburrow/modbus v0.0.0-20161010020032-f7afd8db7d8d
+	github.com/goburrow/modbus v0.1.0
+	github.com/goburrow/serial v0.1.0
 	github.com/hashicorp/go-multierror v0.0.0-20161216184304-ed905158d874
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/common v0.41.0

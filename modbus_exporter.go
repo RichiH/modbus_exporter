@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -54,8 +55,10 @@ const (
 
 var (
 	modbusDurationCounterVec *prometheus.CounterVec
+	modbusMutexDurationCounterVec *prometheus.CounterVec
 	modbusRequestsCounterVec *prometheus.CounterVec
 	mutex sync.Mutex
+	mutexWaiters uint64 = 0;
 )
 
 func main() {
@@ -78,9 +81,28 @@ func main() {
 	level.Info(logger).Log("build_context", version.BuildContext())
 
 	telemetryRegistry := prometheus.NewRegistry()
-	telemetryRegistry.MustRegister(collectors.NewGoCollector())
-	telemetryRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	telemetryRegistry.MustRegister(prometheus.NewGoCollector())
+	telemetryRegistry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 
+	modbusDurationCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "modbus_request_duration_seconds_total",
+		Help: "Total duration of modbus successful requests by target in seconds",
+	}, []string{"target"})
+	telemetryRegistry.MustRegister(modbusDurationCounterVec)
+
+	modbusMutexDurationCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "modbus_request_mutex_duration_seconds_total",
+		Help: "Total duration of waiting for mutex lock for serial bus by target in seconds",
+	}, []string{"target"})
+	telemetryRegistry.MustRegister(modbusDurationCounterVec)
+
+	modbusRequestsCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "modbus_requests_total",
+		Help: "Number of modbus request by status and target",
+	}, []string{"target", "status"})
+	telemetryRegistry.MustRegister(modbusRequestsCounterVec)
+
+	log.Infoln("Loading configuration file", *configFile)
 	level.Info(logger).Log("msg", "Loading configuration file", "config_file", *configFile)
 	config, err := config.LoadConfig(*configFile)
 	if err != nil {
@@ -111,7 +133,8 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		return
 	}
 
-	if !e.GetConfig().HasModule(moduleName) {
+	module := e.GetConfig().GetModule(moduleName)
+	if module == nil {
 		http.Error(w, fmt.Sprintf("module '%v' not defined in configuration file", moduleName), http.StatusBadRequest)
 		return
 	}
@@ -138,12 +161,19 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		return
 	}
 
-	log.Infof("got scrape request for module '%v', target '%v', sub_target '%v'", moduleName, target, subTarget)
-
 	start := time.Now()
-	mutex.Lock()
+	if module.Protocol == config.ModbusProtocolSerial {
+		log.Infof("Trying to get mutex lock for serial bus '%v', %d others waiting...", target, atomic.LoadUint64(&count))
+		atomic.AddUint64(&count, 1)
+		mutex.Lock()
+		atomic.AddUint64(&count, ^uint64(0))
+		mutex_duration := time.Since(start).Seconds()
+		modbusMutexDurationCounterVec.WithLabelValues(target).Add(mutex_duration)
+	}
 	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
-	mutex.Unlock()
+	if module.Protocol == config.ModbusProtocolSerial {
+		mutex.Unlock()
+	}
 	duration := time.Since(start).Seconds()
 	if err != nil {
 		httpStatus := http.StatusInternalServerError
