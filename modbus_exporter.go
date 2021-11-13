@@ -95,7 +95,7 @@ func main() {
 		Name: "modbus_request_serial_mutex_duration_seconds_total",
 		Help: "Total duration of waiting for mutex lock for serial bus by target in seconds",
 	}, []string{"target"})
-	telemetryRegistry.MustRegister(modbusMutexDurationCounterVec)
+	telemetryRegistry.MustRegister(modbusSerialMutexDurationCounterVec)
 
 	modbusSerialMutexWaitersGaugeVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "modbus_request_serial_mutex_waiters",
@@ -172,10 +172,10 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 	if module.Protocol == config.ModbusProtocolSerial {
 		log.Infof("Trying to get mutex lock for serial bus '%v', %d others waiting...", target, atomic.LoadUint64(&mutexWaiters))
 		atomic.AddUint64(&mutexWaiters, 1)
-		modbusSerialMutexDurationCounterVec.WithLabelValues(target).Set(float64(&mutexWaiters))
-        mutex.Lock()
+		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target).Set(float64(&mutexWaiters))
+		mutex.Lock()
 		atomic.AddUint64(&mutexWaiters, ^uint64(0))
-		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target).Set(&mutexWaiters)
+		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target).Set(float64(&mutexWaiters))
 		modbusSerialMutexDurationCounterVec.WithLabelValues(target).Add(time.Since(start).Seconds())
 	}
 	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
