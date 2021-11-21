@@ -60,6 +60,7 @@ var (
 	mutexWaiters uint64 = 0;
 	modbusSerialMutexDurationCounterVec *prometheus.CounterVec
 	modbusSerialMutexWaitersGaugeVec *prometheus.GaugeVec
+	modbusSerialRetriesCounterVec *prometheus.CounterVec
 )
 
 func main() {
@@ -102,6 +103,12 @@ func main() {
 		Help: "Total number of threads currently waiting for mutex lock by serial bus",
 	}, []string{"target"})
 	telemetryRegistry.MustRegister(modbusSerialMutexWaitersGaugeVec)
+
+	modbusSerialRetriesCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "modbus_request_serial_retries_total",
+		Help: "Total number of serial retries following errors by serial bus and modbus_target",
+	}, []string{"target", "modbus_target"})
+	telemetryRegistry.MustRegister(modbusSerialRetriesCounterVec)
 
 	modbusRequestsCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "modbus_requests_total",
@@ -184,6 +191,15 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 	}
 	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
 	if module.Protocol == config.ModbusProtocolSerial {
+		// retry up to two times when a serial scrape fails
+		if err != nil {
+			modbusSerialRetriesCounterVec.WithLabelValues(target, string(subTarget)).Inc()
+			gatherer, err = e.Scrape(target, byte(subTarget), moduleName)
+		}
+		if err != nil {
+			modbusSerialRetriesCounterVec.WithLabelValues(target, string(subTarget)).Inc()
+			gatherer, err = e.Scrape(target, byte(subTarget), moduleName)
+		}
 		mutex.Unlock()
 	}
 	duration := time.Since(start).Seconds()
