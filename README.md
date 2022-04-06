@@ -91,7 +91,7 @@ Support for serial ModBus (RTU) was dropped in git commit d06573828793094fd2bdf3
 Please send a PR if you need it again.
 For now, we suggest using a ModBus PLC/bridge/master to bridge from RTU into TCP.
 
-## Forking information
+## Software provenance
 
 This is forked from https://github.com/lupoDharkael/modbus_exporter which was not maintained any more and did not follow Prometheus best practices.
 Initially, development happened in https://github.com/mxinden/modbus_exporter which has now been retired in favour of https://github.com/RichiH/modbus_exporter .
