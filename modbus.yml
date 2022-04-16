@@ -43,7 +43,7 @@ modules:
         dataType: bool
         bitOffset: 0
         metricType: gauge
-  - name: "carlo_gavazzi_em_et_1xx_series"
+  - name: "carlo_gavazzi_em_et_1xx_series_serial"
     # registers and units from https://gavazzi.se/app/uploads/2020/11/em111_em112_et112_cp.pdf (registers converted from hex to decimal)
     protocol: 'serial'
     baudrate: 57600
@@ -51,7 +51,7 @@ modules:
     parity: "N"
     stopbits: 1
     timeout: 2000
-    metrics:
+    metrics: &cagaemet1xx-metrics
       - name: "cagaemet_phase_voltage_volts"
         help: "Voltage of the phase"
         labels:
@@ -180,7 +180,11 @@ modules:
         address: 308192
         dataType: "uint16"
         metricType: "gauge"
-  - name: "carlo_gavazzi_em_et_3xx_series"
+  - name: "carlo_gavazzi_em_et_1xx_series_tcp"
+    protocol: 'tcp/ip'
+    timeout: 2000
+    metrics: *cagaemet1xx-metrics
+  - name: "carlo_gavazzi_em_et_3xx_series_serial"
     # registers and units from https://gavazzi.se/app/uploads/2020/11/em330_em340_et330_et340_cp.pdf (registers converted from hex to decimal)
     protocol: 'serial'
     baudrate: 57600
@@ -188,7 +192,7 @@ modules:
     parity: "N"
     stopbits: 1
     timeout: 2000
-    metrics:
+    metrics: &cagaemet3xx-metrics
       - name: "cagaemet_phase_voltage_volts"
         help: "Voltage of the phase"
         labels:
@@ -564,3 +568,7 @@ modules:
         address: 308192
         dataType: "uint16"
         metricType: "gauge"
+  - name: "carlo_gavazzi_em_et_3xx_series_tcp"
+    stopbits: 1
+    timeout: 2000
+    metrics: *cagaemet3xx-metrics
