@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -53,11 +52,19 @@ const (
 	ModbusRequestStatusErrorParsingValue ModbusRequestStatusType = "ERROR_PARSING_VALUE"
 )
 
+type SerialMutexStruct struct {
+	mutexMap map[string]*sync.Mutex
+	mutex *sync.Mutex
+}
+
+func NewSerialMutexStruct() *SerialMutexStruct {
+	return &SerialMutexStruct{mutexMap: make(map[string]*sync.Mutex), mutex: new(sync.Mutex)}
+}
+var mutex = NewSerialMutexStruct()
+
 var (
 	modbusDurationCounterVec *prometheus.CounterVec
 	modbusRequestsCounterVec *prometheus.CounterVec
-	mutex sync.Mutex
-	mutexWaiters uint64 = 0;
 	modbusSerialMutexDurationCounterVec *prometheus.CounterVec
 	modbusSerialMutexWaitersGaugeVec *prometheus.GaugeVec
 	modbusSerialRetriesCounterVec *prometheus.CounterVec
@@ -89,19 +96,19 @@ func main() {
 	modbusDurationCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "modbus_request_duration_seconds_total",
 		Help: "Total duration of modbus successful requests by target in seconds",
-	}, []string{"target"})
+	}, []string{"target", "modbus_target"})
 	telemetryRegistry.MustRegister(modbusDurationCounterVec)
 
 	modbusSerialMutexDurationCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "modbus_request_serial_mutex_duration_seconds_total",
-		Help: "Total duration of waiting for mutex lock for serial bus by target in seconds",
-	}, []string{"target"})
+		Help: "Total duration of waiting for mutex lock for serial bus by serial bus and modbus_target in seconds",
+	}, []string{"target", "modbus_target"})
 	telemetryRegistry.MustRegister(modbusSerialMutexDurationCounterVec)
 
 	modbusSerialMutexWaitersGaugeVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "modbus_request_serial_mutex_waiters",
-		Help: "Total number of threads currently waiting for mutex lock by serial bus",
-	}, []string{"target"})
+		Help: "Total number of threads currently waiting for mutex lock by serial bus and modbus_target",
+	}, []string{"target", "modbus_target"})
 	telemetryRegistry.MustRegister(modbusSerialMutexWaitersGaugeVec)
 
 	modbusSerialRetriesCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -113,7 +120,7 @@ func main() {
 	modbusRequestsCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "modbus_requests_total",
 		Help: "Number of modbus request by status and target",
-	}, []string{"target", "status"})
+	}, []string{"target", "modbus_target", "status"})
 	telemetryRegistry.MustRegister(modbusRequestsCounterVec)
 
 	log.Infoln("Loading configuration file", *configFile)
@@ -179,36 +186,44 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 
 	start := time.Now()
 	if module.Protocol == config.ModbusProtocolSerial {
-		if atomic.LoadUint64(&mutexWaiters) > 0 {
-			log.Infof("Serial port '%v' is busy, waiting for module '%v' to scrape sub_target '%v' (%d other threads are also waiting).", target, moduleName, subTarget, atomic.LoadUint64(&mutexWaiters))
+		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target, fmt.Sprint(subTarget)).Inc()
+		_, found := mutex.mutexMap[target]
+		if !found {
+			log.Infof("creating target in mutexmap for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+			mutex.mutex.Lock()
+			mutex.mutexMap[target] = &sync.Mutex{}
+			mutex.mutex.Unlock()
 		}
-		atomic.AddUint64(&mutexWaiters, 1)
-		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target).Set(float64(mutexWaiters))
-		mutex.Lock()
-		atomic.AddUint64(&mutexWaiters, ^uint64(0))
-		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target).Set(float64(mutexWaiters))
-		modbusSerialMutexDurationCounterVec.WithLabelValues(target).Add(time.Since(start).Seconds())
+		log.Infof("prescrape locking inner mutex for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+		mutex.mutexMap[target].Lock()
+		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target, fmt.Sprint(subTarget)).Dec()
+		modbusSerialMutexDurationCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Add(time.Since(start).Seconds())
 	}
 	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
 	if module.Protocol == config.ModbusProtocolSerial {
 		// retry up to two times when a serial scrape fails
 		if err != nil {
-			modbusSerialRetriesCounterVec.WithLabelValues(target, string(subTarget)).Inc()
+			modbusSerialRetriesCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Inc()
 			gatherer, err = e.Scrape(target, byte(subTarget), moduleName)
 		}
 		if err != nil {
-			modbusSerialRetriesCounterVec.WithLabelValues(target, string(subTarget)).Inc()
+			modbusSerialRetriesCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Inc()
 			gatherer, err = e.Scrape(target, byte(subTarget), moduleName)
 		}
-		mutex.Unlock()
+		log.Infof("postscrape unlocking inner mutex for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+		mutex.mutexMap[target].Unlock()
 	}
 	duration := time.Since(start).Seconds()
 	if err != nil {
 		httpStatus := http.StatusInternalServerError
 		if strings.Contains(fmt.Sprintf("%v", err), "unable to connect with target") {
+			modbusRequestsCounterVec.WithLabelValues(target, fmt.Sprint(subTarget), string(ModbusRequestStatusErrorSock)).Inc()
 			httpStatus = http.StatusServiceUnavailable
 		} else if strings.Contains(fmt.Sprintf("%v", err), "i/o timeout") {
+			modbusRequestsCounterVec.WithLabelValues(target, fmt.Sprint(subTarget), string(ModbusRequestStatusErrorTimeout)).Inc()
 			httpStatus = http.StatusGatewayTimeout
+		} else {
+			modbusRequestsCounterVec.WithLabelValues(target, fmt.Sprint(subTarget), string(ModbusRequestStatusErrorParsingValue)).Inc()
 		}
 		http.Error(
 			w,
@@ -218,6 +233,8 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		level.Error(logger).Log("msg", "failed to scrape", "target", target, "module", moduleName, "err", err)
 		return
 	}
+	modbusDurationCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Add(duration)
+	modbusRequestsCounterVec.WithLabelValues(target, fmt.Sprint(subTarget), string(ModbusRequestStatusOK)).Inc()
 
 	promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}).ServeHTTP(w, r)
 }
