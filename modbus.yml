@@ -569,6 +569,6 @@ modules:
         dataType: "uint16"
         metricType: "gauge"
   - name: "carlo_gavazzi_em_et_3xx_series_tcp"
-    stopbits: 1
+    protocol: 'tcp/ip'
     timeout: 2000
     metrics: *cagaemet3xx-metrics
