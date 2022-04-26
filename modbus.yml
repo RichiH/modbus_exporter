@@ -43,7 +43,7 @@ modules:
         dataType: bool
         bitOffset: 0
         metricType: gauge
-  - name: "carlo_gavazzi_em_et_1xx_series_serial"
+  - name: "carlo_gavazzi_em_et_1xx_series_rtu"
     # registers and units from https://gavazzi.se/app/uploads/2020/11/em111_em112_et112_cp.pdf (registers converted from hex to decimal)
     protocol: 'serial'
     baudrate: 57600
@@ -184,7 +184,7 @@ modules:
     protocol: 'tcp/ip'
     timeout: 2000
     metrics: *cagaemet1xx-metrics
-  - name: "carlo_gavazzi_em_et_3xx_series_serial"
+  - name: "carlo_gavazzi_em_et_3xx_series_rtu"
     # registers and units from https://gavazzi.se/app/uploads/2020/11/em330_em340_et330_et340_cp.pdf (registers converted from hex to decimal)
     protocol: 'serial'
     baudrate: 57600
