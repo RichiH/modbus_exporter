@@ -48,6 +48,9 @@ modules:
         address: 301220
         dataType: int16
         metricType: counter
-        ignoredvalues:
-          4294934512: "Data pending, acquisition in progress"
-          4294934524: "The sensor is known but not accessible at the moment"
+        ignoredValues:
+        - value: 4294934512
+          meaning: Data pending, acquisition in progress
+        - value: 4294934513
+          meaning: Reserved
+
