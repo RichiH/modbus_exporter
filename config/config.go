@@ -213,6 +213,15 @@ type MetricDef struct {
 
 	// Scaling factor
 	Factor *float64 `yaml:"factor,omitempty"`
+
+	// Special return values with meaning
+	IgnoredValues []IgnoredValueDef `yaml:"ignoredValues,omitempty"`
+}
+
+// IgnoredValueDef defines an array of special values and the return error
+type IgnoredValueDef struct {
+	Value   *float64 `yaml:"value"`
+	Meaning string   `yaml:"meaning"`
 }
 
 // Validate semantically validates the given metric definition.

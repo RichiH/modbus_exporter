@@ -42,3 +42,12 @@ modules:
         dataType: bool
         bitOffset: 0
         metricType: gauge
+
+      - name: "some_special_device_with_buggy_values"
+        help: "some help for some coil"
+        address: 301220
+        dataType: int16
+        metricType: counter
+        ignoredvalues:
+          4294934512: "Data pending, acquisition in progress"
+          4294934524: "The sensor is known but not accessible at the moment"
