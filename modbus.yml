@@ -17,6 +17,7 @@ modules:
         address: 300022
         # Datatypes allowed: bool, int16, int32, int64, uint16, uint32, uint64,
         #   float16, float32, float64
+        # One register holds 16 bits.
         dataType: int16
         # Endianness allowed: big, little, mixed, yolo
         # Optional. If not defined: big.

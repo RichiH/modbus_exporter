@@ -42,7 +42,7 @@ make build
 
 ## Getting Started
 
-The modbus exporter needs to be passed the *target* and *module* as parameters
+The modbus exporter needs to be passed *target* (including port), *module* and *sub_module* as parameters
 by Prometheus, this can be done with relabelling (see
 [prometheus.yml](prometheus.yml)).
 
@@ -64,7 +64,9 @@ Usage of ./modbus_exporter:
   -telemetry-listen-address string
     	The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself. (default ":9602")
 ```
-Visit http://localhost:9602/modbus?target=1.2.3.4 where 1.2.3.4 is the IP of the modbus IP device to get metrics from. You can also specify a module and a sub_target parameter, to choose which module and subtarget to use from the config file.
+Visit http://localhost:9602/modbus?target=1.2.3.4:502&module=fake&sub_target=1 where 1.2.3.4:502 is the IP and port number of the modbus IP device to get metrics from,
+while module and sub_target parameters specify which module and subtarget to use from the config file.
+If your device doesn't use sub-targets you can usually just set it to 1.
 
 Visit http://localhost:9602/metrics to get the metrics of the exporter itself.
 
