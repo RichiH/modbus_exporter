@@ -56,13 +56,26 @@ Supported flags:
 
 [embedmd]:# (help.txt)
 ```txt
-Usage of ./modbus_exporter:
-  -config.file string
-    	Sets the configuration file. (default "modbus.yml")
-  -modbus-listen-address string
-    	The address to listen on for HTTP requests exposing modbus metrics. (default ":9602")
-  -telemetry-listen-address string
-    	The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself. (default ":9602")
+usage: modbus_exporter [<flags>]
+
+Flags:
+  -h, --help                Show context-sensitive help (also try --help-long
+                            and --help-man).
+      --modbus-listen-address=":9602"  
+                            The address to listen on for HTTP requests exposing
+                            modbus metrics.
+      --telemetry-listen-address=":9602"  
+                            The address to listen on for HTTP requests exposing
+                            telemetry metrics about the exporter itself.
+      --config.file="modbus.yml"  
+                            Sets the configuration file.
+      --log.level=info      Only log messages with the given severity or above.
+                            One of: [debug, info, warn, error]
+      --log.format=logfmt   Output format of log messages. One of: [logfmt,
+                            json]
+      --web.config.file=""  [EXPERIMENTAL] Path to configuration file that can
+                            enable TLS or authentication.
+
 ```
 Visit http://localhost:9602/modbus?target=1.2.3.4:502&module=fake&sub_target=1 where 1.2.3.4:502 is the IP and port number of the modbus IP device to get metrics from,
 while module and sub_target parameters specify which module and subtarget to use from the config file.
@@ -70,11 +83,13 @@ If your device doesn't use sub-targets you can usually just set it to 1.
 
 Visit http://localhost:9602/metrics to get the metrics of the exporter itself.
 
-## Configuration File
+## Configuration Files
 
-Check out [`modbus.yml`](/modbus.yml) for more details on the configuration file
+Check out [`modbus.yml`](/modbus.yml) for details on the modbus configuration file
 format.
 
+This exporter supports the standard Exporter Toolkit configuration for TLS or
+authentication via the [`--web.config.file`](https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md) flag.
 
 ## TODO
 
