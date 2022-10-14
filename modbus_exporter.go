@@ -6,9 +6,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
+	"github.com/prometheus/common/promlog"
+	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -30,37 +33,39 @@ func main() {
 		"config.file",
 		"Sets the configuration file.",
 	).Default("modbus.yml").String()
-	log.AddFlags(kingpin.CommandLine)
-	webConfig := webflag.AddFlags(kingpin.CommandLine)
 
+	promlogConfig := &promlog.Config{}
+	flag.AddFlags(kingpin.CommandLine, promlogConfig)
+	webConfig := webflag.AddFlags(kingpin.CommandLine)
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
+	logger := promlog.New(promlogConfig)
 
 	telemetryRegistry := prometheus.NewRegistry()
 	telemetryRegistry.MustRegister(prometheus.NewGoCollector())
 	telemetryRegistry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 
-	log.Infoln("Loading configuration file", *configFile)
+	level.Info(logger).Log("Loading configuration file", *configFile)
 	config, err := config.LoadConfig(*configFile)
 	if err != nil {
-		log.Fatalln(err)
+		level.Error(logger).Log("err", err)
 	}
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.HandlerFor(telemetryRegistry, promhttp.HandlerOpts{}))
-	log.Infoln("telemetry metrics at: " + *telemetryAddress)
+        level.Info(logger).Log("msg", "telemetry metrics at: " + *telemetryAddress)
 	exporter := modbus.NewExporter(config)
 	router.Handle("/modbus",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			scrapeHandler(exporter, w, r)
+			scrapeHandler(exporter, w, r, logger)
 		}),
 	)
 
-	log.Infoln("Modbus metrics at: " + *modbusAddress)
-	srv := &http.Server{Addr: *modbusAddress}
-	log.Fatal(web.ListenAndServe(srv, *webConfig, log))
+	level.Info(logger).Log("msg", "Modbus metrics at: " + *modbusAddress)
+	srv := &http.Server{Addr: *modbusAddress, Handler: router}
+	level.Error(logger).Log("err", web.ListenAndServe(srv, *webConfig, logger))
 }
 
-func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
+func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, logger log.Logger) {
 	moduleName := r.URL.Query().Get("module")
 	if moduleName == "" {
 		http.Error(w, "'module' parameter must be specified", http.StatusBadRequest)
@@ -90,7 +95,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Infof("got scrape request for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+	level.Info(logger).Log("msg", "got scrape request", "module", moduleName, "target", target, "sub_target", subTarget)
 
 	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
 	if err != nil {
@@ -105,7 +110,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("failed to scrape target '%v' with module '%v': %v", target, moduleName, err),
 			httpStatus,
 		)
-		log.Error(err)
+		level.Error(logger).Log("err", err)
 		return
 	}
 

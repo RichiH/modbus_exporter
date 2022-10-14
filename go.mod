@@ -4,6 +4,7 @@ go 1.11
 
 require (
 	github.com/campoy/embedmd v1.0.0 // indirect
+	github.com/go-kit/log v0.2.0
 	github.com/goburrow/modbus v0.0.0-20161010020032-f7afd8db7d8d
 	github.com/goburrow/serial v0.0.0-20170301104454-d490ecc9d6a1 // indirect
 	github.com/golang/protobuf v1.3.1 // indirect
