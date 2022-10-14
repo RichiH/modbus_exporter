@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,20 +9,32 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
+	"github.com/prometheus/exporter-toolkit/web"
+	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/lupoDharkael/modbus_exporter/config"
 	"github.com/lupoDharkael/modbus_exporter/modbus"
 )
 
 func main() {
-	modbusAddress := flag.String("modbus-listen-address", ":9602",
-		"The address to listen on for HTTP requests exposing modbus metrics.")
-	telemetryAddress := flag.String("telemetry-listen-address", ":9602",
-		"The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself.")
-	configFile := flag.String("config.file", "modbus.yml",
-		"Sets the configuration file.")
+	modbusAddress := kingpin.Flag(
+		"modbus-listen-address",
+		"The address to listen on for HTTP requests exposing modbus metrics.",
+	).Default(":9602").String()
+	telemetryAddress := kingpin.Flag(
+		"telemetry-listen-address",
+		"The address to listen on for HTTP requests exposing telemetry metrics about the exporter itself.",
+	).Default(":9602").String()
+	configFile := kingpin.Flag(
+		"config.file",
+		"Sets the configuration file.",
+	).Default("modbus.yml").String()
+	log.AddFlags(kingpin.CommandLine)
+	webConfig := webflag.AddFlags(kingpin.CommandLine)
 
-	flag.Parse()
+	kingpin.HelpFlag.Short('h')
+	kingpin.Parse()
 
 	telemetryRegistry := prometheus.NewRegistry()
 	telemetryRegistry.MustRegister(prometheus.NewGoCollector())
@@ -45,7 +56,8 @@ func main() {
 	)
 
 	log.Infoln("Modbus metrics at: " + *modbusAddress)
-	log.Fatal(http.ListenAndServe(*modbusAddress, router))
+	srv := &http.Server{Addr: *modbusAddress}
+	log.Fatal(web.ListenAndServe(srv, *webConfig, log))
 }
 
 func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request) {
