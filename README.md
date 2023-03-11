@@ -12,7 +12,7 @@ them via HTTP for Prometheus consumption.
 
  ```
 Note right of Prometheus: promehteus.yml \n --- \n target: Modbus-TCP-10.0.0.5 \n sub_target: Modbus-Unit-10 \n module: VendorXY
-Prometheus->Exporter: http://xxx.de/metrics?target=10.0.0.5&sub_target=10&module=vendorxy
+Prometheus->Exporter: http://xxx.de/modbus?target=10.0.0.5&sub_target=10&module=vendorxy
 Note right of Exporter: modbus.yml \n --- \n module: VendorXY \n - temperature_a: 400001 \n - temperature_b: 400002
 
 Exporter->Modbus_TCP_10.0.0.5: tcp://10.0.0.5?unit=10&register=400001
