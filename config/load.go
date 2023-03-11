@@ -1,7 +1,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -9,7 +9,7 @@ import (
 // LoadConfig unmarshals the targets configuration file.
 func LoadConfig(pathToTargets string) (Config, error) {
 	ls := Config{}
-	yamlFile, err := ioutil.ReadFile(pathToTargets)
+	yamlFile, err := os.ReadFile(pathToTargets)
 	if err != nil {
 		return Config{}, err
 
