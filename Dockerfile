@@ -9,7 +9,7 @@ LABEL maintainer="Richard Hartmann <richih@richih.org>"
 ARG ARCH="amd64"
 ARG OS="linux"
 COPY .build/${OS}-${ARCH}/modbus_exporter /bin/modbus_exporter
-COPY .build/${OS}-${ARCH}/modbus.yml /etc/modbus_exporter/modbus.yml
+COPY modbus.yml /etc/modbus_exporter/modbus.yml
 
 EXPOSE      9602
 USER        nobody
