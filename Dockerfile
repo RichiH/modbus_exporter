@@ -1,6 +1,3 @@
-# This file originally copied from prometheus/systemd_exporter:
-# https://github.com/prometheus-community/systemd_exporter/blob/9f476c669993db46702116f70ce88dce4d1fd475/Dockerfile
-
 ARG ARCH="amd64"
 ARG OS="linux"
 FROM quay.io/prometheus/busybox-${OS}-${ARCH}:latest

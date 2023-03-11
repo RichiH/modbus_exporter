@@ -1,6 +1,3 @@
-# This file originally copied from prometheus/snmp_exporter:
-# https://github.com/prometheus/snmp_exporter/blob/87bf22c3d4811df95b4ded0264908318811d76d2/.github/workflows/golangci-lint.yml
-
 name: golangci-lint
 on:
   push:
