@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-kit/log"
 	"github.com/RichiH/modbus_exporter/config"
 	"github.com/RichiH/modbus_exporter/modbus"
 )
@@ -94,7 +95,7 @@ func TestScrapeHandler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			scrapeHandler(exporter, rr, req)
+			scrapeHandler(exporter, rr, req, log.NewNopLogger())
 
 			if status := rr.Code; status != test.code {
 				t.Errorf(
