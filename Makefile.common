@@ -40,8 +40,8 @@ GO_VERSION_NUMBER ?= $(word 3, $(GO_VERSION))
 PRE_GO_111        ?= $(shell echo $(GO_VERSION_NUMBER) | grep -E 'go1\.(10|[0-9])\.')
 
 PROMU        := $(FIRST_GOPATH)/bin/promu
+EMBEDMD_BIN  := $(FIRST_GOPATH)/bin/embedmd
 pkgs          = ./...
-EMBEDMD_BIN:=$(FIRST_GOPATH)/bin/embedmd
 
 ifeq (arm, $(GOHOSTARCH))
 	GOHOSTARM ?= $(shell GOARM= $(GO) env GOARM)
@@ -263,10 +263,8 @@ $(GOLANGCI_LINT):
 		| sh -s -- -b $(FIRST_GOPATH)/bin $(GOLANGCI_LINT_VERSION)
 endif
 
-ifdef EMBEDMD_BIN
 $(EMBEDMD_BIN):
-	@go install github.com/campoy/embedmd
-endif
+	$(GO) install github.com/campoy/embedmd@latest
 
 .PHONY: precheck
 precheck::
