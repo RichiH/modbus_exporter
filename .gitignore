@@ -16,5 +16,4 @@
 # Binary of the project
 modbus_exporter
 
-# Prometheus data directory
-data/
+/vendor

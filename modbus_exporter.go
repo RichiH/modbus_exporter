@@ -11,8 +11,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 
-	"github.com/lupoDharkael/modbus_exporter/config"
-	"github.com/lupoDharkael/modbus_exporter/modbus"
+	"github.com/RichiH/modbus_exporter/config"
+	"github.com/RichiH/modbus_exporter/modbus"
 )
 
 func main() {

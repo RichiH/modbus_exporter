@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/goburrow/modbus"
-	"github.com/lupoDharkael/modbus_exporter/config"
+	"github.com/RichiH/modbus_exporter/config"
 )
 
 // Exporter represents a Prometheus exporter converting modbus information

@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/lupoDharkael/modbus_exporter/config"
+	"github.com/RichiH/modbus_exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

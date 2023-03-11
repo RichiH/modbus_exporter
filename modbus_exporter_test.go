@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/lupoDharkael/modbus_exporter/config"
-	"github.com/lupoDharkael/modbus_exporter/modbus"
+	"github.com/RichiH/modbus_exporter/config"
+	"github.com/RichiH/modbus_exporter/modbus"
 )
 
 func TestScrapeHandler(t *testing.T) {

@@ -1,7 +1,7 @@
 package modbus
 
 import (
-	"github.com/lupoDharkael/modbus_exporter/config"
+	"github.com/RichiH/modbus_exporter/config"
 )
 
 type metric struct {
