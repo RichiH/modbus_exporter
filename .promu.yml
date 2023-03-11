@@ -19,8 +19,8 @@ build:
         -X github.com/prometheus/common/version.BuildDate={{date "20060102-15:04:05"}}
 tarball:
     files:
+        - modbus.yml
         - LICENSE
-        - NOTICE
 crossbuild:
     platforms:
         # Some platforms have issues with github.com/goburrow/serial
