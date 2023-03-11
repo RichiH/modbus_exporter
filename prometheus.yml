@@ -6,7 +6,7 @@ scrape_configs:
     static_configs:
       - targets:
         # The port must be specified, the standard modbus port is 502
-        - 127.0.0.1:1502  # Modbus device.
+          - 127.0.0.1:1502  # Modbus device.
     params:
       # url parameters, module and sub_target are both required
       module: ["fake"]
