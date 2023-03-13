@@ -25,9 +25,7 @@ include Makefile.common
 
 DOCKER_IMAGE_NAME ?= modbus-exporter
 
-GO           ?= go
-FIRST_GOPATH := $(firstword $(subst :, ,$(shell $(GO) env GOPATH)))
-EMBEDMD_BIN  := $(FIRST_GOPATH)/bin/embedmd
+EMBEDMD_BIN := $(FIRST_GOPATH)/bin/embedmd
 
 build: common-build README.md
 
@@ -39,4 +37,4 @@ help.txt: common-build
 	./modbus_exporter --help 2> help.txt || true
 
 $(EMBEDMD_BIN):
-	$(GO) install github.com/campoy/embedmd@latest
+	GOBIN=$(FIRST_GOPATH)/bin $(GO) install github.com/campoy/embedmd@latest
