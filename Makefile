@@ -35,4 +35,4 @@ help.txt: common-build
 
 $(EMBEDMD_BIN):
 # Ensure that embedmd is not cross-compiled or installed to a subdir; common-build does not clean up vars
-	GOOS="" GOARCH="" GOBIN=$(FIRST_GOPATH)/bin $(GO) install github.com/campoy/embedmd@latest
+	GOOS="" GOARCH="" $(GO) install github.com/campoy/embedmd@latest
