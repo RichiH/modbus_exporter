@@ -11,7 +11,7 @@ them via HTTP for Prometheus consumption.
  Go to: https://bramp.github.io/js-sequence-diagrams/
 
  ```
-Note right of Prometheus: promehteus.yml \n --- \n target: Modbus-TCP-10.0.0.5 \n sub_target: Modbus-Unit-10 \n module: VendorXY
+Note right of Prometheus: prometheus.yml \n --- \n target: Modbus-TCP-10.0.0.5 \n sub_target: Modbus-Unit-10 \n module: VendorXY
 Prometheus->Exporter: http://xxx.de/modbus?target=10.0.0.5&sub_target=10&module=vendorxy
 Note right of Exporter: modbus.yml \n --- \n module: VendorXY \n - temperature_a: 400001 \n - temperature_b: 400002
 
