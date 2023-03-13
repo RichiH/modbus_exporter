@@ -11,9 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Ensure GOBIN is not set during build so that embedmd is installed to the correct path
-unexport GOBIN
-
 # Ensure that 'all' is the default target otherwise it will be the first target from Makefile.common.
 all::
 
@@ -37,4 +34,5 @@ help.txt: common-build
 	./modbus_exporter --help 2> help.txt || true
 
 $(EMBEDMD_BIN):
-	GOBIN=$(FIRST_GOPATH)/bin $(GO) install github.com/campoy/embedmd@latest
+# Ensure that embedmd is not cross-compiled or installed to a subdir; common-build does not clean up vars
+	GOOS="" GOARCH="" GOBIN=$(FIRST_GOPATH)/bin $(GO) install github.com/campoy/embedmd@latest
