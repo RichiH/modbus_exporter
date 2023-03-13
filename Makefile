@@ -30,7 +30,7 @@ README.md: help.txt $(EMBEDMD_BIN)
 	$(EMBEDMD_BIN) -w README.md
 	rm help.txt
 
-help.txt: modbus_exporter
+help.txt: common-build
 	./modbus_exporter --help 2> help.txt || true
 
 $(EMBEDMD_BIN):
