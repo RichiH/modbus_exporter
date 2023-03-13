@@ -1,12 +1,14 @@
-FROM golang as builder
-ADD . /go/modbus_exporter
-WORKDIR /go/modbus_exporter
-RUN make build
+ARG ARCH="amd64"
+ARG OS="linux"
+FROM quay.io/prometheus/busybox-${OS}-${ARCH}:latest
+LABEL maintainer="Richard Hartmann <richih@richih.org>"
 
-FROM ubuntu:latest
-WORKDIR /app
-COPY --from=builder /go/modbus_exporter/modbus_exporter .
-COPY --from=builder /go/modbus_exporter/modbus.yml .
-ENTRYPOINT ["./modbus_exporter"]
-EXPOSE 9602
-EXPOSE 9011
+ARG ARCH="amd64"
+ARG OS="linux"
+COPY .build/${OS}-${ARCH}/modbus_exporter /bin/modbus_exporter
+COPY modbus.yml /etc/modbus_exporter/modbus.yml
+
+EXPOSE      9602
+USER        nobody
+ENTRYPOINT  ["/bin/modbus_exporter"]
+CMD         [ "--config.file=/etc/blackbox_exporter/modbus.yml" ]

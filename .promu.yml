@@ -1,0 +1,59 @@
+go:
+    # Whenever the Go version is updated here, .travis.yml and
+    # .circle/config.yml should also be updated.
+    version: 1.20
+repository:
+    path: github.com/RichiH/modbus_exporter
+build:
+    binaries:
+        - name: modbus_exporter
+    flags: -a -tags 'netgo static_build'
+    ldflags: |
+        -X github.com/prometheus/common/version.Version={{.Version}}
+        -X github.com/prometheus/common/version.Revision={{.Revision}}
+        -X github.com/prometheus/common/version.Branch={{.Branch}}
+        -X github.com/prometheus/common/version.BuildUser={{user}}@{{host}}
+        -X github.com/prometheus/common/version.BuildDate={{date "20060102-15:04:05"}}
+tarball:
+    files:
+        - modbus.yml
+        - LICENSE
+        - NOTICE
+crossbuild:
+    platforms:
+        # Some platforms have issues with github.com/goburrow/serial
+        # - aix/ppc64
+        - darwin/amd64
+        - darwin/arm64
+        # - dragonfly/amd64
+        - freebsd/386
+        - freebsd/amd64
+        - freebsd/arm64
+        - freebsd/armv6
+        - freebsd/armv7
+        # - illumos/amd64
+        - linux/386
+        - linux/amd64
+        - linux/arm64
+        - linux/armv5
+        - linux/armv6
+        - linux/armv7
+        # - linux/mips
+        # - linux/mips64
+        # - linux/mips64le
+        # - linux/mipsle
+        - linux/ppc64
+        - linux/ppc64le
+        - linux/s390x
+        # - netbsd/386
+        # - netbsd/amd64
+        # - netbsd/arm64
+        # - netbsd/armv6
+        # - netbsd/armv7
+        # - openbsd/386
+        # - openbsd/amd64
+        # - openbsd/arm64
+        # - openbsd/armv7
+        - windows/386
+        - windows/amd64
+        - windows/arm64
