@@ -1,5 +1,4 @@
-// Copyright 2017 Alejandro Sirgo Rica
-// Copyright 2019 Max Inden, Richard Hartmann, and The Prometheus Authors
+// Copyright 2019 Richard Hartmann
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at

@@ -18,6 +18,7 @@ tarball:
     files:
         - modbus.yml
         - LICENSE
+        - NOTICE
 crossbuild:
     platforms:
         # Some platforms have issues with github.com/goburrow/serial

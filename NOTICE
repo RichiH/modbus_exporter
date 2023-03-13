@@ -1,0 +1,16 @@
+Exporter which retrieves stats from a modbus system and exports them via HTTP for Prometheus consumption. 
+Copyright 2019 Richard Hartmann
+
+The following components are included in this product:
+
+modbus_exporter
+https://github.com/mxinden/modbus_exporter
+Copyright 2019 Max Inden
+Licensed under the GPL 3.0 License
+Relicensed with permission of all contributors
+
+modbus_exporter
+https://github.com/lupoDharkael/modbus_exporter
+Copyright 2017 Alejandro Sirgo Rica
+Licensed under the GPL 3.0 License
+Relicensed with permission of all contributors
