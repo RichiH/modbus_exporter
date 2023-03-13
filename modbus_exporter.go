@@ -106,9 +106,13 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		return
 	}
 
-	subTarget, err := strconv.Atoi(sT)
+	subTarget, err := strconv.ParseUint(sT, 10, 32)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("'sub_target' parameter must be a valid integer: %v", err), http.StatusBadRequest)
+		return
+	}
+	if subTarget > 255 {
+		http.Error(w, fmt.Sprintf("'sub_target' parameter must be from 0 to 255. Invalid value: %d", subTarget), http.StatusBadRequest)
 		return
 	}
 
