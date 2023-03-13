@@ -11,6 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Ensure GOBIN is not set during build so that embedmd is installed to the correct path
+unexport GOBIN
+
 # Ensure that 'all' is the default target otherwise it will be the first target from Makefile.common.
 all::
 
