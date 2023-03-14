@@ -1,3 +1,7 @@
+## 0.4.1 / 2023-03-14
+
+NOOP: Trigger new release
+
 ## 0.4.0
 
 * [FEATURE] Add counter for errors and change the entry point of exporter metrics (#7)
