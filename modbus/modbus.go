@@ -269,7 +269,7 @@ type InsufficientRegistersError struct {
 
 // Error implements the Golang error interface.
 func (e *InsufficientRegistersError) Error() string {
-	return fmt.Sprintf("insufficient amount of registers provided: %v", e.e)
+	return fmt.Sprintf("insufficient amount of register data provided: %v", e.e)
 }
 
 // Parse parses the given byte slice based on the specified Modbus data type and
@@ -295,14 +295,14 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusFloat16:
 		{
 			if len(rawData) != 2 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 1, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 2 bytes, got %v", len(rawData))}
 			}
 			panic("implement")
 		}
 	case config.ModbusInt16:
 		{
 			if len(rawData) != 2 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 1, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 2 bytes, got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness16b(d.Endianness, rawData)
 			if err != nil {
@@ -314,7 +314,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusUInt16:
 		{
 			if len(rawData) != 2 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 1, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 2 bytes, got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness16b(d.Endianness, rawData)
 			if err != nil {
@@ -326,7 +326,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusInt32:
 		{
 			if len(rawData) != 4 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 2, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes, got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
 			if err != nil {
@@ -338,7 +338,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusUInt32:
 		{
 			if len(rawData) != 4 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 2, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes, got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
 			if err != nil {
@@ -350,7 +350,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusFloat32:
 		{
 			if len(rawData) != 4 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 2, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes, got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
 			if err != nil {
@@ -362,7 +362,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusInt64:
 		{
 			if len(rawData) != 8 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 8 bytes, got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness64b(d.Endianness, rawData)
 			if err != nil {
@@ -374,7 +374,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusUInt64:
 		{
 			if len(rawData) != 8 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 8 bytes, got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness64b(d.Endianness, rawData)
 			if err != nil {
@@ -386,7 +386,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusFloat64:
 		{
 			if len(rawData) != 8 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 8 bytes, got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness64b(d.Endianness, rawData)
 			if err != nil {
