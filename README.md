@@ -39,6 +39,15 @@ Exporter-->Prometheus:temperature_a{module="VendorXY",sub_target="10"} 20 \ntemp
 make build
 ```
 
+## Installing using kubernetes helm charts
+Ideal way to install when using prometheus operator ServiceMonitors.    
+Prometheus stack helm for kubernetes can be installed from here: https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack   
+A kubernetes installer using ansible that installs prometheus and grafana out of the box, can be found here: https://github.com/ReSearchITEng/kubeadm-playbook    
+
+Helm install command:
+```bash
+helm install modbus-exporter oci://docker.io/openenergyprojects/modbus-exporter --version 0.1.0 # -f customValues.yaml
+```
 
 ## Getting Started
 
