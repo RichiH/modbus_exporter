@@ -176,24 +176,26 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		http.Error(w, fmt.Sprintf("'sub_target' parameter must be a valid integer: %v", err), http.StatusBadRequest)
 		return
 	}
-	if subTarget > 255 {
-		http.Error(w, fmt.Sprintf("'sub_target' parameter must be from 0 to 255. Invalid value: %d", subTarget), http.StatusBadRequest)
+	if subTarget < 1 || subTarget > 255 {
+		http.Error(w, fmt.Sprintf("'sub_target' parameter must be from 1 to 255. Invalid value: %d", subTarget), http.StatusBadRequest)
 		return
 	}
 
-	level.Info(logger).Log("msg", "got scrape request", "module", moduleName, "target", target, "sub_target", subTarget)
+	level.Debug(logger).Log("msg", "got scrape request", "module", moduleName, "target", target, "sub_target", subTarget)
 
 	start := time.Now()
 	if module.Protocol == config.ModbusProtocolSerial {
 		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target, fmt.Sprint(subTarget)).Inc()
 		_, found := mutex.mutexMap[target]
 		if !found {
-			level.Info(logger).Log("msg", "creating target in mutexmap", "module", moduleName, "target", target, "subTarget", subTarget)
+			level.Debug(logger).Log("msg", "Locking outer mutex before changing mutexmap", "module", moduleName, "target", target, "subTarget", subTarget)
 			mutex.mutex.Lock()
+			level.Debug(logger).Log("msg", "Creating target in mutexmap", "module", moduleName, "target", target, "subTarget", subTarget)
 			mutex.mutexMap[target] = &sync.Mutex{}
+			level.Debug(logger).Log("msg", "Done changing mutexmap, unLocking outer mutex", "module", moduleName, "target", target, "subTarget", subTarget)
 			mutex.mutex.Unlock()
 		}
-		level.Info(logger).Log("msg", "prescrape locking inner mutex", "module", moduleName, "target", target, "subTarget", subTarget)
+		level.Debug(logger).Log("msg", "Pre-scrape locking inner mutex", "module", moduleName, "target", target, "subTarget", subTarget)
 		mutex.mutexMap[target].Lock()
 		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target, fmt.Sprint(subTarget)).Dec()
 		modbusSerialMutexDurationCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Add(time.Since(start).Seconds())
@@ -209,7 +211,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 			modbusSerialRetriesCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Inc()
 			gatherer, err = e.Scrape(target, byte(subTarget), moduleName)
 		}
-		level.Info(logger).Log("msg", "postscrape unlocking inner mutex", "module", moduleName, "target", target, "subTarget", subTarget)
+		level.Debug(logger).Log("msg", "Post-scrape unlocking inner mutex", "module", moduleName, "target", target, "subTarget", subTarget)
 		mutex.mutexMap[target].Unlock()
 	}
 	duration := time.Since(start).Seconds()
@@ -235,5 +237,6 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 	modbusDurationCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Add(duration)
 	modbusRequestsCounterVec.WithLabelValues(target, fmt.Sprint(subTarget), string(ModbusRequestStatusOK)).Inc()
 
+	level.Debug(logger).Log("msg", "Returning scrape response", "module", moduleName, "target", target, "sub_target", subTarget)
 	promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}).ServeHTTP(w, r)
 }
