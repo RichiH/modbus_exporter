@@ -181,19 +181,19 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		return
 	}
 
-	level.Info(logger).Log("got scrape request for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+	level.Info(logger).Log("msg", "got scrape request", "module", moduleName, "target", target, "sub_target", subTarget)
 
 	start := time.Now()
 	if module.Protocol == config.ModbusProtocolSerial {
 		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target, fmt.Sprint(subTarget)).Inc()
 		_, found := mutex.mutexMap[target]
 		if !found {
-			level.Info(logger).Log("creating target in mutexmap for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+			level.Info(logger).Log("msg", "creating target in mutexmap", "module", moduleName, "target", target, "subTarget", subTarget)
 			mutex.mutex.Lock()
 			mutex.mutexMap[target] = &sync.Mutex{}
 			mutex.mutex.Unlock()
 		}
-		level.Info(logger).Log("prescrape locking inner mutex for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+		level.Info(logger).Log("prescrape locking inner mutex", "module", moduleName, "target", target, "subTarget", subTarget)
 		mutex.mutexMap[target].Lock()
 		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target, fmt.Sprint(subTarget)).Dec()
 		modbusSerialMutexDurationCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Add(time.Since(start).Seconds())
@@ -209,7 +209,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 			modbusSerialRetriesCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Inc()
 			gatherer, err = e.Scrape(target, byte(subTarget), moduleName)
 		}
-		level.Info(logger).Log("postscrape unlocking inner mutex for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+		level.Info(logger).Log("postscrape unlocking inner mutex", "module", moduleName, "target", target, "subTarget", subTarget)
 		mutex.mutexMap[target].Unlock()
 	}
 	duration := time.Since(start).Seconds()
