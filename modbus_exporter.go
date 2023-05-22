@@ -26,7 +26,6 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
@@ -124,7 +123,6 @@ func main() {
 	}, []string{"target", "modbus_target", "status"})
 	telemetryRegistry.MustRegister(modbusRequestsCounterVec)
 
-	log.Infoln("Loading configuration file", *configFile)
 	level.Info(logger).Log("msg", "Loading configuration file", "config_file", *configFile)
 	config, err := config.LoadConfig(*configFile)
 	if err != nil {
@@ -183,19 +181,19 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		return
 	}
 
-	log.Infof("got scrape request for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+	level.Info(logger).Log("got scrape request for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
 
 	start := time.Now()
 	if module.Protocol == config.ModbusProtocolSerial {
 		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target, fmt.Sprint(subTarget)).Inc()
 		_, found := mutex.mutexMap[target]
 		if !found {
-			log.Infof("creating target in mutexmap for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+			level.Info(logger).Log("creating target in mutexmap for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
 			mutex.mutex.Lock()
 			mutex.mutexMap[target] = &sync.Mutex{}
 			mutex.mutex.Unlock()
 		}
-		log.Infof("prescrape locking inner mutex for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+		level.Info(logger).Log("prescrape locking inner mutex for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
 		mutex.mutexMap[target].Lock()
 		modbusSerialMutexWaitersGaugeVec.WithLabelValues(target, fmt.Sprint(subTarget)).Dec()
 		modbusSerialMutexDurationCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Add(time.Since(start).Seconds())
@@ -211,7 +209,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 			modbusSerialRetriesCounterVec.WithLabelValues(target, fmt.Sprint(subTarget)).Inc()
 			gatherer, err = e.Scrape(target, byte(subTarget), moduleName)
 		}
-		log.Infof("postscrape unlocking inner mutex for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
+		level.Info(logger).Log("postscrape unlocking inner mutex for module '%v' target '%v' and sub_target '%v'", moduleName, target, subTarget)
 		mutex.mutexMap[target].Unlock()
 	}
 	duration := time.Since(start).Seconds()
