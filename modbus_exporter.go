@@ -54,20 +54,21 @@ const (
 
 type SerialMutexStruct struct {
 	mutexMap map[string]*sync.Mutex
-	mutex *sync.Mutex
+	mutex    *sync.Mutex
 }
 
 func NewSerialMutexStruct() *SerialMutexStruct {
 	return &SerialMutexStruct{mutexMap: make(map[string]*sync.Mutex), mutex: new(sync.Mutex)}
 }
+
 var mutex = NewSerialMutexStruct()
 
 var (
-	modbusDurationCounterVec *prometheus.CounterVec
-	modbusRequestsCounterVec *prometheus.CounterVec
+	modbusDurationCounterVec            *prometheus.CounterVec
+	modbusRequestsCounterVec            *prometheus.CounterVec
 	modbusSerialMutexDurationCounterVec *prometheus.CounterVec
-	modbusSerialMutexWaitersGaugeVec *prometheus.GaugeVec
-	modbusSerialRetriesCounterVec *prometheus.CounterVec
+	modbusSerialMutexWaitersGaugeVec    *prometheus.GaugeVec
+	modbusSerialRetriesCounterVec       *prometheus.CounterVec
 )
 
 func main() {
