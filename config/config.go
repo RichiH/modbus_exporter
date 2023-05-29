@@ -210,6 +210,9 @@ type MetricDef struct {
 
 	MetricType MetricType `yaml:"metricType"`
 
+	// Offset
+	Offset *float64 `yaml:"offset,omitempty"`
+
 	// Scaling factor
 	Factor *float64 `yaml:"factor,omitempty"`
 }
@@ -243,6 +246,14 @@ func (d *MetricDef) validate() error {
 
 	if d.Factor != nil && *d.Factor == 0.0 {
 		return fmt.Errorf("factor cannot be 0")
+	}
+
+	if d.Offset != nil && d.DataType == ModbusBool {
+		return fmt.Errorf("offset cannot be used with boolean data type")
+	}
+
+	if d.Offset != nil && *d.Offset == 0.0 {
+		return fmt.Errorf("offset cannot be 0")
 	}
 
 	return nil

@@ -210,14 +210,14 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, e
 		// for function code and register address
 		modFunction, err := strconv.ParseUint(fmt.Sprint(definition.Address)[0:1], 10, 64)
 		if err != nil {
-			return []metric{}, fmt.Errorf("modbus function code parcing failed: %v", modFunction)
+			return []metric{}, fmt.Errorf("modbus function code parsing failed: %v", modFunction)
 		}
 
 		// And here we are parcing Modbus Address from config file
 		// for register address
 		modAddress, err := strconv.ParseUint(fmt.Sprint(definition.Address)[1:], 10, 64)
 		if err != nil {
-			return []metric{}, fmt.Errorf("modbus register address parcing failed  %v", modAddress)
+			return []metric{}, fmt.Errorf("modbus register address parsing failed  %v", modAddress)
 		}
 
 		if modAddress > 65535 {
@@ -340,7 +340,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint16(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(int16(data))), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(int16(data)))), nil
 		}
 	case config.ModbusUInt16:
 		{
@@ -352,7 +352,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint16(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(data)), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(data))), nil
 		}
 	case config.ModbusInt32:
 		{
@@ -364,7 +364,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(int32(data))), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(int32(data)))), nil
 		}
 	case config.ModbusUInt32:
 		{
@@ -376,7 +376,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(data)), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(data))), nil
 		}
 	case config.ModbusFloat32:
 		{
@@ -388,7 +388,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(math.Float32frombits(data))), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(math.Float32frombits(data)))), nil
 		}
 	case config.ModbusInt64:
 		{
@@ -400,7 +400,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(int64(data))), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(int64(data)))), nil
 		}
 	case config.ModbusUInt64:
 		{
@@ -412,7 +412,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(data)), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(data))), nil
 		}
 	case config.ModbusFloat64:
 		{
@@ -424,13 +424,22 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return scaleValue(d.Factor, math.Float64frombits(data)), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, math.Float64frombits(data))), nil
 		}
 	default:
 		{
 			return 0, fmt.Errorf("unknown modbus data type")
 		}
 	}
+}
+
+// Offset value
+func offsetValue(f *float64, d float64) float64 {
+	if f == nil {
+		fmt.Println("no offset")
+		return d
+	}
+	return (d + float64(*f))
 }
 
 // Scales value by factor
