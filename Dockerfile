@@ -18,8 +18,8 @@ COPY go.mod go.sum ./
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go mod download
 COPY . .
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go mod tidy
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags '-s -w -extldflags "-static"' -a -o modbus_exporter
-#RUN make
+#RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags '-s -w -extldflags "-static"' -a -o modbus_exporter
+RUN make
 RUN upx --ultra-brute -qq modbus_exporter && \
 upx -t modbus_exporter
 
