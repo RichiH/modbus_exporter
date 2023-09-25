@@ -1,0 +1,32 @@
+[Unit]
+Description=Export modbus metrics to prometheus using config file %i
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/modbus_exporter --config.file "/etc/%i.yml"
+User=modbusexporter
+Group=modbusexporter
+DynamicUser=true
+PrivateUsers=true
+ProtectHome=true
+ProtectSystem=strict
+SystemCallFilter=@system-service
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+KeyringMode=private
+ProtectClock=true
+RestrictRealtime=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHostname=true
+ProtectProc=noaccess
+ProcSubset=pid
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

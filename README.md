@@ -89,6 +89,31 @@ Visit http://localhost:9602/metrics to get the metrics of the exporter itself.
 Check out [`modbus.yml`](/modbus.yml) for more details on the configuration file
 format.
 
+## Installation as a systemd service
+
+An example systemd unit file is included in this repo. You can use it to run modbus_exporter as a systemd service like this:
+
+1. Install the systemd unit file
+    ```
+    sudo cp -a modbus-exporter@.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    ```
+2. Install your `modbus.yml` under etc
+    ```
+    sudo cp -a modbus.yml /etc/modbus-example.yml
+    ```
+3. Start and optionally enable the systemd service.
+    ```
+    sudo systemctl start modbus-exporter@modbus-example
+    sudo systemctl enable modbus-exporter@modbus-example
+    ```
+4. Optionally check status or view log files of the service:
+    ```
+    sudo systemctl status modbus-exporter@modbus-example
+    sudo journalctl -eu modbus-exporter@modbus-example
+    ```
+
+The filename of the configuration file is supplied as an argument to the systemd unit instead of being hardcoded to a default location, therefore allowing multiple configurations on the same system. Furthermore, the systemd unit file makes use of systemd's sandboxing and privilege dropping features, adding an additional level of security.
 
 ## TODO
 
