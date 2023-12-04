@@ -42,8 +42,10 @@ func (e *Exporter) GetConfig() *config.Config {
 	return &e.config
 }
 
-// Scrape scrapes the given target via TCP based on the configuration of the
+// Scrape scrapes the given target based on the configuration of the
 // specified module returning a Prometheus gatherer with the resulting metrics.
+// For TCP the targetAddress is an IP:port and for serial it is the serial device path.
+// Subtarget is the modbus slave id
 func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName string) (prometheus.Gatherer, error) {
 	reg := prometheus.NewRegistry()
 
@@ -52,30 +54,59 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 		return nil, fmt.Errorf("failed to find '%v' in config", moduleName)
 	}
 
-	// TODO: We should probably be reusing these, right?
-	handler := modbus.NewTCPClientHandler(targetAddress)
-	if module.Timeout != 0 {
-		handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
-	}
-	handler.SlaveId = subTarget
-	if err := handler.Connect(); err != nil {
-		return nil, fmt.Errorf("unable to connect with target %s via module %s",
-			targetAddress, module.Name)
-	}
+	switch module.Protocol {
+	case config.ModbusProtocolTCPIP:
+		handler := modbus.NewTCPClientHandler(targetAddress)
 
-	// TODO: Should we reuse this?
-	c := modbus.NewClient(handler)
+		defer handler.Close()
+		if module.Timeout != 0 {
+			handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
+		}
+		handler.SlaveId = subTarget
+		if err := handler.Connect(); err != nil {
+			return nil, fmt.Errorf("unable to connect with target %s via module %s, error: %s",
+				targetAddress, module.Name, err)
+		}
+		c := modbus.NewClient(handler)
+		metrics, err := scrapeMetrics(module.Metrics, c)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scrape metrics for module '%v', target '%s', sub_target '%d': %v", moduleName, targetAddress, subTarget, err.Error())
+		}
+		if err := registerMetrics(reg, moduleName, metrics); err != nil {
+			return nil, fmt.Errorf("failed to register metrics for module %v: %v", moduleName, err.Error())
+		}
+	case config.ModbusProtocolSerial:
+		handler := modbus.NewRTUClientHandler(targetAddress)
+		if module.Baudrate != 0 {
+			handler.BaudRate = module.Baudrate
+		}
+		if module.Databits != 0 {
+			handler.DataBits = module.Databits
+		}
+		if module.Parity != "" {
+			handler.Parity = module.Parity
+		}
+		if module.Stopbits != 0 {
+			handler.StopBits = module.Stopbits
+		}
 
-	// Close tcp connection.
-	defer handler.Close()
-
-	metrics, err := scrapeMetrics(module.Metrics, c)
-	if err != nil {
-		return nil, fmt.Errorf("failed to scrape metrics for module '%v': %v", moduleName, err.Error())
-	}
-
-	if err := registerMetrics(reg, moduleName, metrics); err != nil {
-		return nil, fmt.Errorf("failed to register metrics for module %v: %v", moduleName, err.Error())
+		defer handler.Close()
+		if module.Timeout != 0 {
+			handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
+		}
+		handler.SlaveId = subTarget
+		if err := handler.Connect(); err != nil {
+			return nil, fmt.Errorf("unable to connect with target %s via module %s, error: %s",
+				targetAddress, module.Name, err)
+		}
+		c := modbus.NewClient(handler)
+		metrics, err := scrapeMetrics(module.Metrics, c)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scrape metrics for module '%v', target '%s', sub_target '%d': %v", moduleName, targetAddress, subTarget, err.Error())
+		}
+		if err := registerMetrics(reg, moduleName, metrics); err != nil {
+			return nil, fmt.Errorf("failed to register metrics for module %v: %v", moduleName, err.Error())
+		}
 	}
 
 	return reg, nil
@@ -179,14 +210,14 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, e
 		// for function code and register address
 		modFunction, err := strconv.ParseUint(fmt.Sprint(definition.Address)[0:1], 10, 64)
 		if err != nil {
-			return []metric{}, fmt.Errorf("modbus function code parcing failed: %v", modFunction)
+			return []metric{}, fmt.Errorf("modbus function code parsing failed: %v", modFunction)
 		}
 
-		// And here we are parcing Modbus Address from config file
+		// And here we are parsing Modbus Address from config file
 		// for register address
 		modAddress, err := strconv.ParseUint(fmt.Sprint(definition.Address)[1:], 10, 64)
 		if err != nil {
-			return []metric{}, fmt.Errorf("modbus register address parcing failed  %v", modAddress)
+			return []metric{}, fmt.Errorf("modbus register address parsing failed  %v", modAddress)
 		}
 
 		if modAddress > 65535 {
@@ -309,7 +340,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint16(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(int16(data))), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(int16(data)))), nil
 		}
 	case config.ModbusUInt16:
 		{
@@ -321,43 +352,43 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint16(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(data)), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(data))), nil
 		}
 	case config.ModbusInt32:
 		{
 			if len(rawData) != 4 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes (int32), got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
 			if err != nil {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(int32(data))), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(int32(data)))), nil
 		}
 	case config.ModbusUInt32:
 		{
 			if len(rawData) != 4 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes (uint32), got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
 			if err != nil {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(data)), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(data))), nil
 		}
 	case config.ModbusFloat32:
 		{
 			if len(rawData) != 4 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes (float32), got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
 			if err != nil {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(math.Float32frombits(data))), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(math.Float32frombits(data)))), nil
 		}
 	case config.ModbusInt64:
 		{
@@ -369,7 +400,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(int64(data))), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(int64(data)))), nil
 		}
 	case config.ModbusUInt64:
 		{
@@ -381,7 +412,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(data)), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, float64(data))), nil
 		}
 	case config.ModbusFloat64:
 		{
@@ -393,13 +424,51 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return scaleValue(d.Factor, math.Float64frombits(data)), nil
+			return scaleValue(d.Factor, offsetValue(d.Offset, math.Float64frombits(data))), nil
+		}
+	case config.ModbusSplitFloat64:
+		{
+			// a SplitFloat64 is two registers where the first int32 is the INT part (left of the comma
+			// and an int16 represents the decimal part (right of the comma). The MSW of the decimals is always 0.
+			// a reading of [0 15 0 0 0 0 1 130] with yolo encoding in the sensor == 15.386
+			if len(rawData) != 8 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 8 bytes, got %v", len(rawData))}
+			}
+			rawIntPart := rawData[:4]
+			// the MSW of the decimals is always 0 so we skip those two bytes
+			rawDecPart := rawData[4:6]
+			intDataWithEndianness, err := convertEndianness32b(d.Endianness, rawIntPart)
+			if err != nil {
+				return float64(0), err
+			}
+			decDataWithEndianness, err := convertEndianness16b(d.Endianness, rawDecPart)
+			if err != nil {
+				return float64(0), err
+			}
+			intData := binary.BigEndian.Uint32(intDataWithEndianness)
+			decData := binary.BigEndian.Uint16(decDataWithEndianness)
+			intStr := strconv.FormatUint(uint64(intData), 10)
+			decStr := fmt.Sprintf("%03s", strconv.FormatUint(uint64(decData), 10))
+			data := intStr + "." + decStr
+			fdata, err := strconv.ParseFloat(data, 64)
+			if err != nil {
+				return float64(0), err
+			}
+			return scaleValue(d.Factor, offsetValue(d.Offset, fdata)), nil
 		}
 	default:
 		{
 			return 0, fmt.Errorf("unknown modbus data type")
 		}
 	}
+}
+
+// Offset value
+func offsetValue(f *float64, d float64) float64 {
+	if f == nil {
+		return d
+	}
+	return (d + float64(*f))
 }
 
 // Scales value by factor

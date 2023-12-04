@@ -43,3 +43,1050 @@ modules:
         dataType: bool
         bitOffset: 0
         metricType: gauge
+  - name: "carlo_gavazzi_em_et_1xx_series_rtu"
+    # registers and units from https://gavazzi.se/app/uploads/2020/11/em111_em112_et112_cp.pdf (registers converted from hex to decimal)
+    protocol: 'serial'
+    baudrate: 57600
+    databits: 8
+    parity: "N"
+    stopbits: 1
+    timeout: 2000
+    metrics: &cagaemet1xx-metrics
+      - name: "cagaemet_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L1"
+          reference: "N"
+        address: 300000
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_amps"
+        help: "Power draw on the phase in Amperes"
+        labels:
+          phase: "L1"
+        address: 300002
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.001
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_watts"
+        help: "Power draw on the phase in Watts"
+        labels:
+          phase: "L1"
+        address: 300004
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_va"
+        help: "Power draw on the phase in Volts-Amperes"
+        labels:
+          phase: "L1"
+        address: 300006
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_var"
+        help: "Power draw on the phase in Volts-Amperes-Reactive"
+        labels:
+          phase: "L1"
+        address: 300008
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_load_dmd_watts"
+        help: "Power draw DMD on the meter in Watts"
+        labels:
+          phase: "L1"
+        address: 300010
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_identification_code"
+        help: "Carlo Gavazzi Controls identification code for this meter"
+        address: 300011
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "cagaemet_load_dmd_peak_watts"
+        help: "Peak power draw DMD on the meter in Watts"
+        labels:
+          phase: "L1"
+        address: 300012
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_power_factor"
+        help: "Power factor of the phase"
+        labels:
+          phase: "L1"
+        address: 300014
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.001
+        endianness: "yolo"
+      - name: "cagaemet_frequency_hertz"
+        help: "Power frequency in Hertz"
+        address: 300015
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_consumed_kwh_total"
+        help: "Total kwh consumed on this meter"
+        address: 300016
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_consumed_kvarh_total"
+        help: "Total kvarh consumed on this meter"
+        address: 300018
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_produced_kwh_total"
+        help: "Total kwh produced on this meter"
+        address: 300032
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_produced_kvarh_total"
+        help: "Total kvarh produced on this meter"
+        address: 300034
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_firmware_version"
+        help: "The firmware version of this meter"
+        address: 300770
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "cagaemet_firmware_revision"
+        help: "The firmware revision of this meter"
+        address: 300771
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "cagaemet_precision_consumed_kwh_total"
+        help: "Total kwh consumed on this meter (high precision counter)"
+        address: 301024
+        dataType: "splitfloat64"
+        metricType: "counter"
+        endianness: "yolo"
+      - name: "cagaemet_precision_produced_kwh_total"
+        help: "Total kwh produced on this meter (high precision counter)"
+        address: 301032
+        dataType: "splitfloat64"
+        metricType: "counter"
+        endianness: "yolo"
+      - name: "cagaemet_modbus_address"
+        help: "The Modbus address for this meter (1-247)"
+        address: 308192
+        dataType: "uint16"
+        metricType: "gauge"
+  - name: "carlo_gavazzi_em_et_1xx_series_tcp"
+    protocol: 'tcp/ip'
+    timeout: 2000
+    metrics: *cagaemet1xx-metrics
+  - name: "carlo_gavazzi_em_et_3xx_series_rtu"
+    # registers and units from https://gavazzi.se/app/uploads/2020/11/em330_em340_et330_et340_cp.pdf (registers converted from hex to decimal)
+    protocol: 'serial'
+    baudrate: 57600
+    databits: 8
+    parity: "N"
+    stopbits: 1
+    timeout: 2000
+    metrics: &cagaemet3xx-metrics
+      - name: "cagaemet_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L1"
+          reference: "N"
+        address: 300000
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L2"
+          reference: "N"
+        address: 300002
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L3"
+          reference: "N"
+        address: 300004
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L1"
+          reference: "L2"
+        address: 300006
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L2"
+          reference: "L3"
+        address: 300008
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_voltage_volts"
+        help: "Voltage of the phase"
+        labels:
+          phase: "L3"
+          reference: "L1"
+        address: 300010
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_identification_code"
+        help: "Carlo Gavazzi Controls identification code for this meter"
+        address: 300011
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "cagaemet_phase_load_amps"
+        help: "Power draw on the phase in Amperes"
+        labels:
+          phase: "L1"
+        address: 300012
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.001
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_amps"
+        help: "Power draw on the phase in Amperes"
+        labels:
+          phase: "L2"
+        address: 300014
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.001
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_amps"
+        help: "Power draw on the phase in Amperes"
+        labels:
+          phase: "L3"
+        address: 300016
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.001
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_watts"
+        help: "Power draw on the phase in Watts"
+        labels:
+          phase: "L1"
+        address: 300018
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_watts"
+        help: "Power draw on the phase in Watts"
+        labels:
+          phase: "L2"
+        address: 300020
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_watts"
+        help: "Power draw on the phase in Watts"
+        labels:
+          phase: "L3"
+        address: 300022
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_va"
+        help: "Power draw on the phase in Volts-Amperes"
+        labels:
+          phase: "L1"
+        address: 300024
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_va"
+        help: "Power draw on the phase in Volts-Amperes"
+        labels:
+          phase: "L2"
+        address: 300026
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_va"
+        help: "Power draw on the phase in Volts-Amperes"
+        labels:
+          phase: "L3"
+        address: 300028
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_var"
+        help: "Power draw on the phase in Volts-Amperes-Reactive"
+        labels:
+          phase: "L1"
+        address: 300030
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_var"
+        help: "Power draw on the phase in Volts-Amperes-Reactive"
+        labels:
+          phase: "L2"
+        address: 300032
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_load_var"
+        help: "Power draw on the phase in Volts-Amperes-Reactive"
+        labels:
+          phase: "L3"
+        address: 300034
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_system_voltage_volts"
+        help: "Average voltage between phase and neutral in this meter"
+        labels:
+          phase: "All"
+          reference: "N"
+        address: 300036
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_system_voltage_volts"
+        help: "Average voltage between phases in this meter"
+        labels:
+          phase: "All"
+          reference: "L"
+        address: 300038
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_system_load_watts"
+        help: "Power draw across the whole meter in Watts"
+        address: 300040
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_system_load_va"
+        help: "Power draw across the whole meter in Volts-Amperes"
+        address: 300042
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_system_load_var"
+        help: "Power draw across the whole meter in Volts-Amperes-Reactive"
+        address: 300044
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_power_factor"
+        help: "Power factor of the phase"
+        labels:
+          phase: "L1"
+        address: 300046
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.001
+      - name: "cagaemet_phase_power_factor"
+        help: "Power factor of the phase"
+        labels:
+          phase: "L2"
+        address: 300047
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.001
+      - name: "cagaemet_phase_power_factor"
+        help: "Power factor of the phase"
+        labels:
+          phase: "L3"
+        address: 300048
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.001
+      - name: "cagaemet_system_power_factor"
+        help: "Power factor across the whole meter"
+        address: 300049
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.001
+      - name: "cagaemet_frequency_hertz"
+        help: "Power frequency in Hertz"
+        address: 300051
+        dataType: "int16"
+        metricType: "gauge"
+        factor: 0.1
+      - name: "cagaemet_consumed_kwh_total"
+        help: "Total kwh consumed on this meter"
+        address: 300052
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_consumed_kvarh_total"
+        help: "Total kvarh consumed on this meter"
+        address: 300054
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_load_dmd_watts"
+        help: "Power draw DMD on the meter in Watts"
+        address: 300056
+        dataType: "int32"
+        metricType: "gauge"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_load_dmd_peak_watts"
+        help: "Peak power draw DMD on the meter in Watts"
+        address: 300058
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_consumed_kwh_partial_total"
+        help: "Total partial kwh consumed on this meter"
+        address: 300060
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_consumed_kvarh_partial_total"
+        help: "Total partial kvarh consumed on this meter"
+        address: 300062
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_consumed_kwh_total"
+        help: "Total kwh consumed on this phase"
+        labels:
+          phase: "L1"
+        address: 300064
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_consumed_kwh_total"
+        help: "Total kwh consumed on this phase"
+        labels:
+          phase: "L2"
+        address: 300066
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_consumed_kwh_total"
+        help: "Total kwh consumed on this phase"
+        labels:
+          phase: "L3"
+        address: 300068
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_produced_kwh_total"
+        help: "Total kwh produced on this meter"
+        address: 300078
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_produced_kvarh_total"
+        help: "Total kvarh produced on this meter"
+        address: 300080
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_produced_kwh_total"
+        help: "Total kwh produced on this phase"
+        labels:
+          phase: "L1"
+        address: 300096
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_produced_kwh_total"
+        help: "Total kwh produced on this phase"
+        labels:
+          phase: "L2"
+        address: 300098
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_phase_produced_kwh_total"
+        help: "Total kwh produced on this phase"
+        labels:
+          phase: "L3"
+        address: 300100
+        dataType: "int32"
+        metricType: "counter"
+        factor: 0.1
+        endianness: "yolo"
+      - name: "cagaemet_firmware_version"
+        help: "The firmware version of this meter"
+        address: 300770
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "cagaemet_firmware_revision"
+        help: "The firmware revision of this meter"
+        address: 300771
+        dataType: "uint16"
+        metricType: "gauge"
+      - name: "cagaemet_precision_consumed_kwh_total"
+        help: "Total kwh consumed on this meter (high precision counter)"
+        address: 301024
+        dataType: "splitfloat64"
+        metricType: "counter"
+        endianness: "yolo"
+      - name: "cagaemet_precision_produced_kwh_total"
+        help: "Total kwh produced on this meter (high precision counter)"
+        address: 301032
+        dataType: "splitfloat64"
+        metricType: "counter"
+        endianness: "yolo"
+      - name: "cagaemet_modbus_address"
+        help: "The Modbus address for this meter (1-247)"
+        address: 308192
+        dataType: "uint16"
+        metricType: "gauge"
+  - name: "carlo_gavazzi_em_et_3xx_series_tcp"
+    protocol: 'tcp/ip'
+    timeout: 2000
+    metrics: *cagaemet3xx-metrics
+  - name: "deye_sun12k_rtu"
+    protocol: 'serial'
+    baudrate: 9600
+    databits: 8
+    parity: "N"
+    stopbits: 1
+    timeout: 2000
+    # registers and units from https://github.com/klatremis/esphome-for-deye/blob/main/deye12k%20esphome%20config
+    metrics:
+      - address: 300108
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Maximum battery charge current in amperes"
+        metricType: "gauge"
+        name: "deye_sun12k_maximum_battery_charge_current_amps"
+      - address: 300109
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Maximum battery discharge current in amperes"
+        metricType: "gauge"
+        name: "deye_sun12k_maximum_battery_discharge_current_amps"
+      - address: 300128
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Maximum battery_grid charge current in amperes"
+        metricType: "gauge"
+        name: "deye_sun12k_maximum_battery_grid_charge_current_amps"
+      - address: 300148
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 1 start"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_1"
+      - address: 300149
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 2 start"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_2"
+      - address: 300150
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 3 start"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_3"
+      - address: 300151
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 4 start"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_4"
+      - address: 300152
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 5 start"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_5"
+      - address: 300153
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 6 start"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_6"
+      - address: 300154
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 1 power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_1_power_watts"
+      - address: 300155
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 2 power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_2_power_watts"
+      - address: 300156
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 3 power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_3_power_watts"
+      - address: 300157
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 4 power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_4_power_watts"
+      - address: 300158
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 5 power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_5_power_watts"
+      - address: 300159
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 6 power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_6_power_watts"
+      - address: 300166
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 1 capacity in percent"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_1_capacity_percent"
+      - address: 300167
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 2 capacity in percent"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_2_capacity_percent"
+      - address: 300168
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 3 capacity in percent"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_3_capacity_percent"
+      - address: 300169
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 4 capacity in percent"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_4_capacity_percent"
+      - address: 300170
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 5 capacity in percent"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_5_capacity_percent"
+      - address: 300171
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Time point 6 capacity in percent"
+        metricType: "gauge"
+        name: "deye_sun12k_time_point_6_capacity_percent"
+      - address: 300541
+        dataType: "int16"
+        endianness: "big"
+        factor: 0.1
+        offset: -1000.0
+        help: "Heat sink temperature in celcius"
+        metricType: "gauge"
+        name: "deye_sun12k_heatsink_temperature_celcius"
+      - address: 300655
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.01
+        help: "load frequency in Hz"
+        metricType: "gauge"
+        name: "deye_sun12k_load_frequency_hertz"
+      - address: 300638
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.01
+        help: "inverter-frequency in Hz"
+        metricType: "gauge"
+        name: "deye_sun12k_inverter_frequency_hertz"
+      - address: 300672
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "PV1 Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_pv1_power_watts"
+      - address: 300673
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "PV2 Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_pv2_power_watts"
+      - address: 300676
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "PV1 Voltage in volts"
+        metricType: "gauge"
+        name: "deye_sun12k_pv1_voltage_volts"
+      - address: 300678
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "PV2 Voltage in volts"
+        metricType: "gauge"
+        name: "deye_sun12k_pv2_voltage_volts"
+      - address: 300677
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "PV1 Current in amperes"
+        metricType: "gauge"
+        name: "deye_sun12k_pv1_current_amps"
+      - address: 300679
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "PV2 Current in amperes"
+        metricType: "gauge"
+        name: "deye_sun12k_pv2_current_amps"
+      - address: 300529
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "Daily Production in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_daily_production_kwh"
+      - address: 300534
+        dataType: "uint32"
+        endianness: "yolo"
+        factor: 0.1
+        help: "Total PV Production in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_total_pv_production_kwh"
+      - address: 300625
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "Total Grid Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_total_grid_power_watts"
+      - address: 300520
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "Daily Energy Bought in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_daily_energy_bought_kwh"
+      - address: 300521
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "Daily Energy Sold in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_daily_energy_sold_kwh"
+      - address: 300522
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "Total Energy Bought in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_total_energy_bought_kwh"
+      - address: 300524
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "Total Energy Sold in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_total_energy_sold_kwh"
+      - address: 300527
+        dataType: "uint32"
+        endianness: "yolo"
+        factor: 0.1
+        help: "Total Consumption in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_total_consumption_kwh"
+      - address: 300502
+        dataType: "int16"
+        endianness: "big"
+        factor: 0.1
+        help: "active power generation of today in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_active_power_generation_of_today_kwh"
+      - address: 300630
+        dataType: "int16"
+        endianness: "big"
+        factor: 0.01
+        help: "Grid Current L1 in amperes"
+        metricType: "gauge"
+        name: "deye_sun12k_grid_current_l1_amps"
+      - address: 300631
+        dataType: "int16"
+        endianness: "big"
+        factor: 0.01
+        help: "Grid Current L2 in amperes"
+        metricType: "gauge"
+        name: "deye_sun12k_grid_current_l2_amps"
+      - address: 300632
+        dataType: "int16"
+        endianness: "big"
+        factor: 0.01
+        help: "Grid Current L3 in amperes"
+        metricType: "gauge"
+        name: "deye_sun12k_grid_current_l3_amps"
+      - address: 300598
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "Grid Voltage L1 in volts"
+        metricType: "gauge"
+        name: "deye_sun12k_grid_voltage_l1_volts"
+      - address: 300599
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "Grid Voltage L2 in volts"
+        metricType: "gauge"
+        name: "deye_sun12k_grid_voltage_l2_volts"
+      - address: 300600
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "Grid Voltage L3 in volts"
+        metricType: "gauge"
+        name: "deye_sun12k_grid_voltage_l3_volts"
+      - address: 300604
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "Internal CT L1 Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_internal_ct_l1_power_watts"
+      - address: 300605
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "Internal CT L2 Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_internal_ct_l2_power_watts"
+      - address: 300606
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "Internal CT L3 Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_internal_ct_l3_power_watts"
+      - address: 300607
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "Internal total Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_internal_total_power_watts"
+      - address: 300616
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "External CT L1 Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_external_ct_l1_power_watts"
+      - address: 300617
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "External CT L2 Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_external_ct_l2_power_watts"
+      - address: 300618
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "External CT L3 Power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_external_ct_l3_power_watts"
+      - address: 300619
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "Out-of-grid total power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_out_of_grid_total_power_watts"
+      - address: 300653
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "Load totalpower in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_load_totalpower_watts"
+      - address: 300553
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Warning1"
+        metricType: "gauge"
+        name: "deye_sun12k_warning1"
+      - address: 300554
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Warning2"
+        metricType: "gauge"
+        name: "deye_sun12k_warning2"
+      - address: 300555
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Warning3"
+        metricType: "gauge"
+        name: "deye_sun12k_warning3"
+      - address: 300556
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Error1"
+        metricType: "gauge"
+        name: "deye_sun12k_error1"
+      - address: 300557
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Error2"
+        metricType: "gauge"
+        name: "deye_sun12k_error2"
+      - address: 300558
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Error3"
+        metricType: "gauge"
+        name: "deye_sun12k_error3"
+      - address: 300548
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "Failure status of communication board"
+        metricType: "gauge"
+        name: "deye_sun12k_failure_status_of_communication_board"
+      - address: 300065
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        help: "Minimum insulation impedance in kohms"
+        metricType: "gauge"
+        name: "deye_sun12k_minimum_insulation_impedance_kohms"
+      - address: 300516
+        dataType: "uint32"
+        endianness: "yolo"
+        factor: 0.1
+        help: "Total charge of the battery in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_battery_total_charge_kwh"
+      - address: 300518
+        dataType: "uint32"
+        endianness: "yolo"
+        factor: 0.1
+        help: "Total discharge of the battery in kWh"
+        metricType: "gauge"
+        name: "deye_sun12k_battery_total_discharge_kwh"
+      - address: 300586
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.1
+        offset: -1000.0
+        help: "battery temperature in celcius"
+        metricType: "gauge"
+        name: "deye_sun12k_battery_temperature_celcius"
+      - address: 300587
+        dataType: "uint16"
+        endianness: "big"
+        factor: 0.01
+        help: "battery voltage in volts"
+        metricType: "gauge"
+        name: "deye_sun12k_battery_voltage_volts"
+      - address: 300588
+        dataType: "uint16"
+        endianness: "big"
+        factor: 1
+        help: "battery capacity in percent"
+        metricType: "gauge"
+        name: "deye_sun12k_battery_capacity_percent"
+      - address: 300590
+        dataType: "int16"
+        endianness: "big"
+        factor: 1
+        help: "Battery output power in watts"
+        metricType: "gauge"
+        name: "deye_sun12k_battery_output_power_watts"
+      - address: 300591
+        dataType: "int16"
+        endianness: "big"
+        factor: 0.01
+        help: "Battery output current in amperes"
+        metricType: "gauge"
+        name: "deye_sun12k_battery_output_current_amps"

@@ -17,3 +17,5 @@
 modbus_exporter
 
 /vendor
+# Prometheus data directory
+data/
