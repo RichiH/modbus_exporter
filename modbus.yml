@@ -175,6 +175,12 @@ modules:
         address: 300771
         dataType: "uint16"
         metricType: "gauge"
+      - name: "cagaemet_consumed_precision_kwh_total"
+        help: "Total kwh consumed on this meter (high precision counter)"
+        address: 301024
+        dataType: "splitfloat64"
+        metricType: "counter"
+        endianness: "yolo"
       - name: "cagaemet_modbus_address"
         help: "The Modbus address for this meter (1-247)"
         address: 308192
@@ -563,6 +569,12 @@ modules:
         address: 300771
         dataType: "uint16"
         metricType: "gauge"
+      - name: "cagaemet_consumed_precision_kwh_total"
+        help: "Total kwh consumed on this meter (high precision counter)"
+        address: 301024
+        dataType: "splitfloat64"
+        metricType: "counter"
+        endianness: "yolo"
       - name: "cagaemet_modbus_address"
         help: "The Modbus address for this meter (1-247)"
         address: 308192

@@ -213,7 +213,7 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, e
 			return []metric{}, fmt.Errorf("modbus function code parsing failed: %v", modFunction)
 		}
 
-		// And here we are parcing Modbus Address from config file
+		// And here we are parsing Modbus Address from config file
 		// for register address
 		modAddress, err := strconv.ParseUint(fmt.Sprint(definition.Address)[1:], 10, 64)
 		if err != nil {
@@ -357,7 +357,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusInt32:
 		{
 			if len(rawData) != 4 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes (int32), got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
 			if err != nil {
@@ -369,7 +369,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusUInt32:
 		{
 			if len(rawData) != 4 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes (uint32), got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
 			if err != nil {
@@ -381,7 +381,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	case config.ModbusFloat32:
 		{
 			if len(rawData) != 4 {
-				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes, got %v", len(rawData))}
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 4 bytes (float32), got %v", len(rawData))}
 			}
 			rawDataWithEndianness, err := convertEndianness32b(d.Endianness, rawData)
 			if err != nil {
@@ -426,6 +426,34 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
 			return scaleValue(d.Factor, offsetValue(d.Offset, math.Float64frombits(data))), nil
 		}
+	case config.ModbusSplitFloat64:
+		{
+			// a SplitFloat64 is two registers where the first int32 is the INT part (left of the comma
+			// and an int16 represents the decimal part (right of the comma). The MSW of the decimals is always 0.
+			// a reading of [0 15 0 0 0 0 1 130] with yolo encoding in the sensor == 15.386
+			if len(rawData) != 8 {
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 8 bytes, got %v", len(rawData))}
+			}
+			rawIntPart := rawData[:4]
+			// the MSW of the decimals is always 0 so we skip those two bytes
+			rawDecPart := rawData[4:6]
+			intDataWithEndianness, err := convertEndianness32b(d.Endianness, rawIntPart)
+			if err != nil {
+				return float64(0), err
+			}
+			decDataWithEndianness, err := convertEndianness16b(d.Endianness, rawDecPart)
+			if err != nil {
+				return float64(0), err
+			}
+			intData := binary.BigEndian.Uint32(intDataWithEndianness)
+			decData := binary.BigEndian.Uint16(decDataWithEndianness)
+			data := strconv.FormatUint(uint64(intData), 10) + "." + strconv.FormatUint(uint64(decData), 10)
+			fdata, err := strconv.ParseFloat(data, 64)
+			if err != nil {
+				return float64(0), err
+			}
+			return scaleValue(d.Factor, offsetValue(d.Offset, fdata)), nil
+		}
 	default:
 		{
 			return 0, fmt.Errorf("unknown modbus data type")
@@ -436,7 +464,6 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 // Offset value
 func offsetValue(f *float64, d float64) float64 {
 	if f == nil {
-		fmt.Println("no offset")
 		return d
 	}
 	return (d + float64(*f))

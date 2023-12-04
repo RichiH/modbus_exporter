@@ -92,6 +92,7 @@ func (t *ModbusDataType) validate() error {
 		ModbusInt64,
 		ModbusUInt64,
 		ModbusFloat64,
+		ModbusSplitFloat64,
 	}
 
 	if t == nil {
@@ -120,6 +121,7 @@ const (
 	ModbusInt64   ModbusDataType = "int64"
 	ModbusUInt64  ModbusDataType = "uint64"
 	ModbusFloat64 ModbusDataType = "float64"
+	ModbusSplitFloat64 ModbusDataType = "splitfloat64"
 )
 
 // EndiannessType is an Enum, representing the possible endianness types a register
