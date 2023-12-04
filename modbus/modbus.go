@@ -447,7 +447,9 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 			}
 			intData := binary.BigEndian.Uint32(intDataWithEndianness)
 			decData := binary.BigEndian.Uint16(decDataWithEndianness)
-			data := strconv.FormatUint(uint64(intData), 10) + "." + strconv.FormatUint(uint64(decData), 10)
+			intStr := strconv.FormatUint(uint64(intData), 10)
+			decStr := fmt.Sprintf("%03s", strconv.FormatUint(uint64(decData), 10))
+			data := intStr + "." + decStr
 			fdata, err := strconv.ParseFloat(data, 64)
 			if err != nil {
 				return float64(0), err
