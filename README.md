@@ -62,7 +62,7 @@ usage: modbus_exporter [<flags>]
 Flags:
   -h, --[no-]help                Show context-sensitive help (also try
                                  --help-long and --help-man).
-      --config.file="modbus.yml"  
+      --config.file=modbus.yml ...  
                                  Sets the configuration file.
       --[no-]web.systemd-socket  Use systemd socket activation listeners instead
                                  of port listeners (Linux only).
@@ -89,6 +89,8 @@ Visit http://localhost:9602/metrics to get the metrics of the exporter itself.
 Check out [`modbus.yml`](/modbus.yml) for more details on the configuration file
 format.
 
+The `--config.file` parameter can be used multiple times to load more than one file.
+It also supports [glob filename matching](https://pkg.go.dev/path/filepath#Glob), e.g. `modbus_*.yml`.
 
 ## TODO
 
