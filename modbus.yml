@@ -3,7 +3,9 @@ modules:
     # Module name, needs to be passed as parameter by Prometheus.
   - name: "fake"
     protocol: 'tcp/ip'
+    # Certain modbus devices need special timing workarounds
     workarounds:
+      # Sleep a certain time after the TCP connection is established
       sleepAfterConnect: "1s"
     metrics:
         # Name of the metric.
