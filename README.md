@@ -56,7 +56,27 @@ Supported flags:
 
 [embedmd]:# (help.txt)
 ```txt
-/bin/sh: Zeile 1: ./modbus_exporter: Kann die Binärdatei nicht ausführen: Fehler im Format der Programmdatei
+usage: modbus_exporter [<flags>]
+
+
+Flags:
+  -h, --[no-]help                Show context-sensitive help (also try
+                                 --help-long and --help-man).
+      --config.file="modbus.yml"  
+                                 Sets the configuration file.
+      --[no-]web.systemd-socket  Use systemd socket activation listeners instead
+                                 of port listeners (Linux only).
+      --web.listen-address=:9602 ...  
+                                 Addresses on which to expose metrics and web
+                                 interface. Repeatable for multiple addresses.
+      --web.config.file=""       [EXPERIMENTAL] Path to configuration file that
+                                 can enable TLS or authentication.
+      --log.level=info           Only log messages with the given severity or
+                                 above. One of: [debug, info, warn, error]
+      --log.format=logfmt        Output format of log messages. One of: [logfmt,
+                                 json]
+      --[no-]version             Show application version.
+
 ```
 Visit http://localhost:9602/modbus?target=1.2.3.4:502&module=fake&sub_target=1 where 1.2.3.4:502 is the IP and port number of the modbus IP device to get metrics from,
 while module and sub_target parameters specify which module and subtarget to use from the config file.
