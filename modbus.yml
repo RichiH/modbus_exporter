@@ -3,6 +3,8 @@ modules:
     # Module name, needs to be passed as parameter by Prometheus.
   - name: "fake"
     protocol: 'tcp/ip'
+    workarounds:
+      sleepAfterConnect: "1s"
     metrics:
         # Name of the metric.
       - name: "power_consumption_total"
