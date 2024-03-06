@@ -111,11 +111,9 @@ Wants=network-online.target
 [Service]
 User=modbus_exporter
 Group=nogroup
-ExecStart=modbus_exporter --config.file='/etc/modbus_exporter.yml'
+ExecStart=/usr/local/bin/modbus_exporter --config.file='/etc/modbus_exporter.yml'
 Restart=on-failure
 RestartSec=1
-StandardOutput=journal
-StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
