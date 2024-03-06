@@ -63,6 +63,10 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 			targetAddress, module.Name)
 	}
 
+	if module.Workarounds.SleepAfterConnect > 0 {
+		time.Sleep(module.Workarounds.SleepAfterConnect)
+	}
+
 	// TODO: Should we reuse this?
 	c := modbus.NewClient(handler)
 

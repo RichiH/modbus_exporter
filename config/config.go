@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -59,14 +60,19 @@ type ListTargets map[string]*Module
 
 // Module defines the configuration parameters of a modbus module.
 type Module struct {
-	Name     string         `yaml:"name"`
-	Protocol ModbusProtocol `yaml:"protocol"`
-	Timeout  int            `yaml:"timeout"`
-	Baudrate int            `yaml:"baudrate"`
-	Databits int            `yaml:"databits"`
-	Stopbits int            `yaml:"stopbits"`
-	Parity   string         `yaml:"parity"`
-	Metrics  []MetricDef    `yaml:"metrics"`
+	Name        string         `yaml:"name"`
+	Protocol    ModbusProtocol `yaml:"protocol"`
+	Timeout     int            `yaml:"timeout"`
+	Baudrate    int            `yaml:"baudrate"`
+	Databits    int            `yaml:"databits"`
+	Stopbits    int            `yaml:"stopbits"`
+	Parity      string         `yaml:"parity"`
+	Metrics     []MetricDef    `yaml:"metrics"`
+	Workarounds Workarounds    `yaml:"workarounds"`
+}
+
+type Workarounds struct {
+	SleepAfterConnect time.Duration `yaml:"sleepAfterConnect"`
 }
 
 // RegisterAddr specifies the register in the possible output of _digital
