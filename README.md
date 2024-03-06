@@ -89,6 +89,50 @@ Visit http://localhost:9602/metrics to get the metrics of the exporter itself.
 Check out [`modbus.yml`](/modbus.yml) for more details on the configuration file
 format.
 
+## Systemd service
+
+You can create a systemd service if you want to run modbus exporter as a service in the background. Start by creating a modbus_exporter system account (on Debian)
+
+```shell
+useradd -r modbus_exporter
+```
+
+Place the modbus_exporter binary at `/usr/local/bin/modbus_exporter`
+
+The following systemd unit file can be saved to `/etc/systemd/system/modbus_exporter.service`:
+
+```systemd
+[Unit]
+Description=Modbus TCP Prometheus exporter
+Requires=network.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=modbus_exporter
+Group=nogroup
+ExecStart=modbus_exporter --config.file='/etc/modbus_exporter.yml'
+Restart=on-failure
+RestartSec=1
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then locate your config file in `/etc/modbus_exporter.yml`, and run the following commands to make systemd aware of config changes and startup the modbus_exporter
+
+```shell
+systemctl daemon-reload
+systemctl start modbus_exporter
+```
+
+In order to start the service at boot, run the following
+
+```shell
+systemctl enable modbus_exporter
+```
 
 ## TODO
 
