@@ -91,7 +91,7 @@ format.
 
 ## Systemd service
 
-You can create a systemd service if you want to run modbus exporter as a service in the background. Start by creating a modbus_exporter system account (on Debian)
+You can create a systemd service if you want to run modbus exporter as a service in the background. Start by creating a modbus_exporter system account (example on Debian)
 
 ```shell
 useradd -r modbus_exporter
@@ -99,7 +99,7 @@ useradd -r modbus_exporter
 
 Place the modbus_exporter binary at `/usr/local/bin/modbus_exporter`
 
-The following systemd unit file can be saved to `/etc/systemd/system/modbus_exporter.service`:
+The following example systemd unit file can be saved to `/etc/systemd/system/modbus_exporter.service`:
 
 ```systemd
 [Unit]
