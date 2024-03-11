@@ -15,27 +15,38 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
-// LoadConfig unmarshals the targets configuration file.
-func LoadConfig(pathToTargets string) (Config, error) {
-	ls := Config{}
-	yamlFile, err := os.ReadFile(pathToTargets)
-	if err != nil {
-		return Config{}, err
+// LoadConfig unmarshals the targets configuration file(s).
+func LoadConfig(pathToTargets []string) (Config, error) {
+	fullConfig := Config{}
+	for _, p := range pathToTargets {
+		files, err := filepath.Glob(p)
+		if err != nil {
+			return Config{}, err
+		}
+		for _, f := range files {
+			ls := Config{}
+			yamlFile, err := os.ReadFile(f)
+			if err != nil {
+				return Config{}, err
+			}
 
+			err = yaml.Unmarshal(yamlFile, &ls)
+			if err != nil {
+				return Config{}, err
+			}
+
+			if err := ls.validate(); err != nil {
+				return Config{}, err
+			}
+
+			fullConfig.Modules = append(fullConfig.Modules, ls.Modules...)
+		}
 	}
 
-	err = yaml.Unmarshal(yamlFile, &ls)
-	if err != nil {
-		return Config{}, err
-	}
-
-	if err := ls.validate(); err != nil {
-		return Config{}, err
-	}
-
-	return ls, nil
+	return fullConfig, nil
 }

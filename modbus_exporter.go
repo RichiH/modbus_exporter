@@ -41,7 +41,7 @@ func main() {
 		configFile = kingpin.Flag(
 			"config.file",
 			"Sets the configuration file.",
-		).Default("modbus.yml").String()
+		).Default("modbus.yml").Strings()
 		toolkitFlags = webflag.AddFlags(kingpin.CommandLine, ":9602")
 	)
 
@@ -59,7 +59,7 @@ func main() {
 	telemetryRegistry.MustRegister(collectors.NewGoCollector())
 	telemetryRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	level.Info(logger).Log("msg", "Loading configuration file", "config_file", *configFile)
+	level.Info(logger).Log("msg", "Loading configuration file(s)", "config_file", strings.Join(*configFile, ", "))
 	config, err := config.LoadConfig(*configFile)
 	if err != nil {
 		level.Error(logger).Log("msg", "Error loading config", "err", err)
