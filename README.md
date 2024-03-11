@@ -35,6 +35,12 @@ Exporter-->Prometheus:temperature_a{module="VendorXY",sub_target="10"} 20 \ntemp
 
 ## Building
 
+Prerequisite packages:
+- make
+- go (called `golang` at some package managers)
+
+Run:
+
 ```bash
 make build
 ```
@@ -42,9 +48,10 @@ make build
 
 ## Getting Started
 
-The modbus exporter needs to be passed *target* (including port), *module* and *sub_module* as parameters
-by Prometheus, this can be done with relabelling (see
-[prometheus.yml](prometheus.yml)).
+The modbus exporter can be tested standalone, but should be added as a target in your Prometheus config.
+
+Prometheus needs the following labels parsed by the modbus exporter: *target* (including port), *module* and *sub_module* as parameters,
+this can be done with relabelling as shown in the example [prometheus.yml](prometheus.yml).
 
 Once Prometheus is properly configured, run the exporter via:
 
@@ -86,12 +93,12 @@ Visit http://localhost:9602/metrics to get the metrics of the exporter itself.
 
 ## Configuration File
 
-Check out [`modbus.yml`](/modbus.yml) for more details on the configuration file
+Check out [`modbus.yml`](modbus.yml) for more details on the configuration file
 format.
 
 ## Systemd service
 
-You can create a systemd service if you want to run modbus exporter as a service in the background. Start by creating a modbus_exporter system account (example on Debian)
+You can create a systemd service if you want to run modbus exporter as a background service. Start by creating a modbus_exporter system account (example on Debian)
 
 ```shell
 useradd -r modbus_exporter
@@ -119,14 +126,14 @@ RestartSec=1
 WantedBy=multi-user.target
 ```
 
-Then locate your config file in `/etc/modbus_exporter.yml`, and run the following commands to make systemd aware of config changes and startup the modbus_exporter
+Then locate your Modbus exporter config file in `/etc/modbus_exporter.yml`, and run the following commands to make systemd aware of config changes and startup the modbus_exporter
 
 ```shell
 systemctl daemon-reload
 systemctl start modbus_exporter
 ```
 
-In order to start the service at boot, run the following
+In order to start the service at system boot, run the following
 
 ```shell
 systemctl enable modbus_exporter
