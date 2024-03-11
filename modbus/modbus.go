@@ -29,7 +29,7 @@ import (
 // Exporter represents a Prometheus exporter converting modbus information
 // retrieved from remote targets via TCP as Prometheus style metrics.
 type Exporter struct {
-	config config.Config
+	Config config.Config
 }
 
 // NewExporter returns a new modbus exporter.
@@ -39,7 +39,7 @@ func NewExporter(config config.Config) *Exporter {
 
 // GetConfig loads the config file
 func (e *Exporter) GetConfig() *config.Config {
-	return &e.config
+	return &e.Config
 }
 
 // Scrape scrapes the given target via TCP based on the configuration of the
@@ -47,7 +47,7 @@ func (e *Exporter) GetConfig() *config.Config {
 func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName string) (prometheus.Gatherer, error) {
 	reg := prometheus.NewRegistry()
 
-	module := e.config.GetModule(moduleName)
+	module := e.Config.GetModule(moduleName)
 	if module == nil {
 		return nil, fmt.Errorf("failed to find '%v' in config", moduleName)
 	}
