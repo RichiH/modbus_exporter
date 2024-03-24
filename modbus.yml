@@ -3,6 +3,15 @@ modules:
     # Module name, needs to be passed as parameter by Prometheus.
   - name: "fake"
     protocol: 'tcp/ip'
+
+    # IP and port number of the modbus IP device to get metrics from.
+    # Optinal. If specified, this value is used and the target HTTP request parameter is ignored.
+    # target: "1.2.3.4:502"
+
+    # Modbus slave address/id to use
+    # Optional. If specified, this value is used and the sub_target HTTP request parameter is ignored.
+    # subTarget: 0
+
     # Certain modbus devices need special timing workarounds
     workarounds:
       # Sleep a certain time after the TCP connection is established

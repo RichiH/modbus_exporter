@@ -88,32 +88,45 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		http.Error(w, "'module' parameter must be specified", http.StatusBadRequest)
 		return
 	}
-
-	if !e.GetConfig().HasModule(moduleName) {
+	module := e.GetConfig().GetModule(moduleName)
+	if module == nil {
 		http.Error(w, fmt.Sprintf("module '%v' not defined in configuration file", moduleName), http.StatusBadRequest)
 		return
 	}
 
-	target := r.URL.Query().Get("target")
-	if target == "" {
-		http.Error(w, "'target' parameter must be specified", http.StatusBadRequest)
-		return
+	var target string
+	if module.Target == nil {
+		target = r.URL.Query().Get("target")
+		if target == "" {
+			http.Error(w, "'target' parameter must be specified", http.StatusBadRequest)
+			return
+		}
+	} else {
+		target = *module.Target
 	}
 
-	sT := r.URL.Query().Get("sub_target")
-	if sT == "" {
-		http.Error(w, "'sub_target' parameter must be specified", http.StatusBadRequest)
-		return
-	}
+	var subTarget uint8
+	if module.SubTarget == nil {
+		sT := r.URL.Query().Get("sub_target")
+		if sT == "" {
+			http.Error(w, "'sub_target' parameter must be specified", http.StatusBadRequest)
+			return
+		}
 
-	subTarget, err := strconv.ParseUint(sT, 10, 32)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("'sub_target' parameter must be a valid integer: %v", err), http.StatusBadRequest)
-		return
-	}
-	if subTarget > 255 {
-		http.Error(w, fmt.Sprintf("'sub_target' parameter must be from 0 to 255. Invalid value: %d", subTarget), http.StatusBadRequest)
-		return
+		parsedSubTarget, err := strconv.ParseUint(sT, 10, 32)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("'sub_target' parameter must be a valid integer: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		if parsedSubTarget > 255 {
+			http.Error(w, fmt.Sprintf("'sub_target' parameter must be from 0 to 255. Invalid value: %d", parsedSubTarget), http.StatusBadRequest)
+			return
+		}
+
+		subTarget = byte(parsedSubTarget)
+	} else {
+		subTarget = *module.SubTarget
 	}
 
 	level.Info(logger).Log("msg", "got scrape request", "module", moduleName, "target", target, "sub_target", subTarget)
