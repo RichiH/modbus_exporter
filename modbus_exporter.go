@@ -19,6 +19,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/go-kit/log"
@@ -118,12 +119,48 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 
 	level.Info(logger).Log("msg", "got scrape request", "module", moduleName, "target", target, "sub_target", subTarget)
 
-	gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
+	gatherer, err := e.Scrape(target, byte(subTarget), moduleName) // Scrape
+
+	// No errors, export data to Prometheus
+	if err == nil {
+		promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}).ServeHTTP(w, r)
+		return
+	}
+
+	// In case of scraping error: sleep ScrapeErrorWait time and try again for ScrapeErrorRetryCount times.
+	// Try again if a race condition if happens where the same target is queried on different sub-targets,
+	// before a previous query has gotten a response.
+	ScrapeErrorRetryCount := e.Config.GetModule(moduleName).Workarounds.ScrapeErrorRetryCount // int cannot be nil, can arise issue if user wants to set it to 0
+	ScrapeErrorWait := e.Config.GetModule(moduleName).Workarounds.ScrapeErrorWait
+
+	if ScrapeErrorRetryCount == 0 { // if unset or 0, set to 3 retries
+		ScrapeErrorRetryCount = 3
+		level.Error(logger).Log("msg", "ScrapeErrorRetryCount: Scrape retry count is unset, using default value 3", "target", target, "module", moduleName, "err", err)
+	}
+	if ScrapeErrorWait == 0 { // If unset or 0, wait 100 milliseconds
+		ScrapeErrorWait = 100
+		level.Error(logger).Log("msg", "ScrapeErrorWait: Scrape retry waiting time is unset, using default value 100", "target", target, "module", moduleName, "err", err)
+	}
+
+	for i := 1; i <= ScrapeErrorRetryCount; i++ { // Retry x times until giving up and returning error
+		time.Sleep(time.Duration(ScrapeErrorWait) * time.Millisecond) // sleep for y milliseconds
+
+		// Another attempt at scraping
+		gatherer, err := e.Scrape(target, byte(subTarget), moduleName)
+		if err == nil {
+			promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}).ServeHTTP(w, r)
+			return
+		}
+	}
+
+	// Return error to Prometheus and log if it still persists.
+
 	if err != nil {
 		httpStatus := http.StatusInternalServerError
 		if strings.Contains(fmt.Sprintf("%v", err), "unable to connect with target") {
 			httpStatus = http.StatusServiceUnavailable
-		} else if strings.Contains(fmt.Sprintf("%v", err), "i/o timeout") {
+			//	Throw HTTP 504 StatusGatewayTimeout error in case of module returning modbus exception 11
+		} else if strings.Contains(fmt.Sprintf("%v", err), "i/o timeout") || strings.Contains(fmt.Sprintf("%v", err), "exception '11' (gateway target device failed to respond)") {
 			httpStatus = http.StatusGatewayTimeout
 		}
 		http.Error(
