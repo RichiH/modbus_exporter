@@ -1,4 +1,181 @@
 modules:
+  - name: 'Electrex_Femto_D4'
+    protocol: 'tcp/ip'
+    metrics:
+      - name: modbus_network_frequency_hertz
+        help: 'Network frequency'
+        address: 40218
+        dataType: float32
+        metricType: gauge
+      - name: modbus_phase_to_neutral_volt
+        help: 'Phase to neutral voltage'
+        address: 40220
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '1'
+      - name: modbus_phase_to_neutral_volt
+        help: 'Phase to neutral voltage'
+        address: 40222
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '2'
+      - name: modbus_phase_to_neutral_volt
+        help: 'Phase to neutral voltage'
+        address: 40224
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '3'
+      - name: modbus_phase_current_ampere
+        help: 'Phase current'
+        address: 40232
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '1'
+      - name: modbus_phase_current_ampere
+        help: 'Phase current'
+        address: 40234
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '2'
+      - name: modbus_phase_current_ampere
+        help: 'Phase current'
+        address: 40236
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '3'
+      - name: modbus_neutral_current_ampere
+        help: 'Neutral current'
+        address: 40238
+        dataType: float32
+        metricType: gauge
+      - name: modbus_phase_power_active # #TODO WATT OR JOULE?
+        help: 'Phase active power'
+        address: 40240
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '1'
+      - name: modbus_phase_power_active
+        help: 'Phase active power'
+        address: 40242
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '2'
+      - name: modbus_phase_power_active
+        help: 'Phase active power'
+        address: 40244
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '3'
+      - name: modbus_power_active_total #TODO WATT OR JOULE?, "total" is bad
+        help: 'Total active power'
+        address: 40276
+        dataType: float32
+        metricType: gauge
+      - name: modbus_phase_power_reactive #TODO: _voltamperereactive or _var?
+        help: 'Phase reactive power'
+        address: 40240
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '1'
+      - name: modbus_phase_power_reactive
+        help: 'Phase reactive power'
+        address: 40242
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '2'
+      - name: modbus_phase_power_reactive
+        help: 'Phase reactive power'
+        address: 40244
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '3'
+      - name: modbus_total_power_reactive
+        help: 'Total reactive power'
+        address: 40278
+        dataType: float32
+        metricType: gauge
+      - name: modbus_phase_power_factor_cosphi
+        help: 'Power factor cos(phi)'
+        address: 40258
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '1'
+      - name: modbus_phase_power_factor_cosphi
+        help: 'Power factor cos(phi)'
+        address: 40260
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '2'
+      - name: modbus_phase_power_factor_cosphi
+        help: 'Power factor cos(phi)'
+        address: 40262
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: '3'
+      - name: modbus_total_power_factor_cosphi
+        help: 'Total power factor'
+        address: 40282
+        dataType: float32
+        metricType: gauge
+
+      - name: modbus_phase_voltage_thd #TODO is this really total harmonic distortion or is this distortion factor
+        help: 'Phase to neutral voltage THD (R)'
+        address: 40200
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: 'R'
+      - name: modbus_voltage_thd
+        help: 'Phase to neutral voltage THD (S)'
+        address: 40202
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: 'S'
+      - name: modbus_voltage_thd
+        help: 'Phase to neutral voltage THD (T)'
+        address: 40204
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: 'T'
+
+      - name: modbus_current_thd #TODO is this really total harmonic distortion or is this distortion factor
+        help: 'Phase current THD (R)'
+        address: 40212
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: 'R'
+      - name: modbus_current_thd
+        help: 'Phase current THD (S)'
+        address: 40214
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: 'S'
+      - name: modbus_current_thd
+        help: 'Phase current THD (T)'
+        address: 40216
+        dataType: float32
+        metricType: gauge
+        labels:
+          phase: 'T'
 
     # Module name, needs to be passed as parameter by Prometheus.
   - name: "fake"
@@ -42,14 +219,12 @@ modules:
         # Factor is multiplied with the scraped value to produce the metric value
         # Optional.
         factor: 3.1415926535
-
       - name: "some_gauge"
         help: "some help for some gauge"
         address: 30023
         dataType: int16
         metricType: gauge
         factor: 2
-
       - name: "coil"
         help: "some help for some coil"
         address: 124
