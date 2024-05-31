@@ -262,7 +262,23 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc, modAddress uint64) 
 		return metric{}, err
 	}
 
+	// Check Value with special meaning from config.yml
+	for _, iv := range definition.IgnoredValues {
+		if v == *iv.Value {
+			return metric{}, &IgnoredValueMeaningError{fmt.Sprintf("value is %v - %s", *iv.Value, iv.Meaning)}
+		}
+	}
+
 	return metric{definition.Name, definition.Help, definition.Labels, v, definition.MetricType}, nil
+}
+
+// IgnoredValueMeaningError is returned whenever a value equals the ignoredValue defined in config.yaml
+type IgnoredValueMeaningError struct {
+	e string
+}
+
+func (e *IgnoredValueMeaningError) Error() string {
+	return fmt.Sprintf("ignored value returned as value: %v", e.e)
 }
 
 // InsufficientRegistersError is returned in Parse() whenever not enough
