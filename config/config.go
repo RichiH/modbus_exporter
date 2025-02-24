@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	multierror "github.com/hashicorp/go-multierror"
@@ -22,7 +23,9 @@ import (
 
 // Config represents the configuration of the modbus exporter.
 type Config struct {
-	Modules []Module `yaml:"modules"`
+	Modules          []Module `yaml:"modules"`
+	UseRanges        *bool    `yaml:"useRanges"`
+	RangeSensitivity uint64   `yaml:"rangeSensitivity"`
 }
 
 // validate semantically validates the given config.
@@ -60,15 +63,17 @@ type ListTargets map[string]*Module
 
 // Module defines the configuration parameters of a modbus module.
 type Module struct {
-	Name        string         `yaml:"name"`
-	Protocol    ModbusProtocol `yaml:"protocol"`
-	Timeout     int            `yaml:"timeout"`
-	Baudrate    int            `yaml:"baudrate"`
-	Databits    int            `yaml:"databits"`
-	Stopbits    int            `yaml:"stopbits"`
-	Parity      string         `yaml:"parity"`
-	Metrics     []MetricDef    `yaml:"metrics"`
-	Workarounds Workarounds    `yaml:"workarounds"`
+	Name             string         `yaml:"name"`
+	UseRanges        *bool          `yaml:"useRanges"`
+	RangeSensitivity uint64         `yaml:"rangeSensitivity"`
+	Protocol         ModbusProtocol `yaml:"protocol"`
+	Timeout          int            `yaml:"timeout"`
+	Baudrate         int            `yaml:"baudrate"`
+	Databits         int            `yaml:"databits"`
+	Stopbits         int            `yaml:"stopbits"`
+	Parity           string         `yaml:"parity"`
+	Metrics          []MetricDef    `yaml:"metrics"`
+	Workarounds      Workarounds    `yaml:"workarounds"`
 }
 
 type Workarounds struct {
@@ -80,6 +85,16 @@ type Workarounds struct {
 // RegisterAddr specifies the register in the possible output of _digital
 // output_, _digital input, _ananlog input, _analog output_.
 type RegisterAddr uint32
+
+func (r RegisterAddr) GetModFunction() (modFunction uint64, err error) {
+	modFunction, err = strconv.ParseUint(fmt.Sprint(r)[0:1], 10, 64)
+	return modFunction, err
+}
+
+func (r RegisterAddr) GetModAddress() (modAddress uint64, err error) {
+	modAddress, err = strconv.ParseUint(fmt.Sprint(r)[1:], 10, 64)
+	return modAddress, err
+}
 
 // ModbusDataType is an Enum, representing the possible data types a register
 // value can be interpreted as.
@@ -112,6 +127,23 @@ func (t *ModbusDataType) validate() error {
 	return fmt.Errorf("expected one of the following data types %v but got '%v'",
 		possibleModbusDataTypes,
 		*t)
+}
+
+// Offset calculates and returns the register offset size based on the ModbusDataType value.
+func (t *ModbusDataType) Offset() uint16 {
+	switch *t {
+	case ModbusFloat16,
+		ModbusInt16,
+		ModbusBool,
+		ModbusUInt16:
+		return uint16(1)
+	case ModbusFloat32,
+		ModbusInt32,
+		ModbusUInt32:
+		return uint16(2)
+	default:
+		return uint16(4)
+	}
 }
 
 const (

@@ -2,6 +2,8 @@ modules:
 
     # Module name, needs to be passed as parameter by Prometheus.
   - name: "fake"
+    useRanges: true
+    rangeSensitivity: 10
     protocol: 'tcp/ip'
     # Certain modbus devices need special timing workarounds
     timeout: # int
