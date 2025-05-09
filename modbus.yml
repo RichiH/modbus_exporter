@@ -16,6 +16,8 @@ modules:
       scrapeErrorWait: # int representing milliseconds.
       # Retries for failed scrape
       scrapeErrorRetryCount: # int
+      # Sleep a certain amount of time between metrics (if the server needs a break between queries)
+      scrapeInterludeWait: "0ms"
     metrics:
         # Name of the metric.
       - name: "power_consumption_total"
