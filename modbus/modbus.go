@@ -58,6 +58,32 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 		handler.Timeout = time.Duration(module.Timeout) * time.Millisecond
 	}
 	handler.SlaveId = subTarget
+
+
+	handler.StopBits = module.Stopbits
+
+	if module.Parity  != "" {
+		handler.Parity = module.Parity
+	} else
+	{
+		handler.Parity = "N"
+	}
+
+
+	if module.DataBits   != 0 {
+		handler.DataBits  = module.DataBits 
+	} else
+	{
+		handler.DataBits  = 8
+	}
+
+	if module.BaudRate   != 0 {
+		handler.BaudRate  = module.BaudRate 
+	} else
+	{
+		handler.BaudRate  = 9600
+	}
+
 	if err := handler.Connect(); err != nil {
 		return nil, fmt.Errorf("unable to connect with target %s via module %s",
 			targetAddress, module.Name)
