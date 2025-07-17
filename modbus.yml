@@ -4,6 +4,9 @@ modules:
   - name: "fake"
     useRanges: true
     rangeSensitivity: 10
+    rangeBlocklist:
+      - start: 300003
+        end: 300004
     protocol: 'tcp/ip'
     # Certain modbus devices need special timing workarounds
     timeout: # int
@@ -44,6 +47,8 @@ modules:
         # Factor is multiplied with the scraped value to produce the metric value
         # Optional.
         factor: 3.1415926535
+        # Set to true to exclude this register from automatically generated ranges.
+        rangeBlacklist: false
 
       - name: "some_gauge"
         help: "some help for some gauge"

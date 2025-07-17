@@ -73,7 +73,11 @@ type Module struct {
 	Stopbits         int            `yaml:"stopbits"`
 	Parity           string         `yaml:"parity"`
 	Metrics          []MetricDef    `yaml:"metrics"`
-	Workarounds      Workarounds    `yaml:"workarounds"`
+	// RangeBlocklist defines register ranges that should never be included
+	// when forming automatic ranges. Each range must refer to a single
+	// Modbus function (first digit of the address).
+	RangeBlocklist []RegisterRange `yaml:"rangeBlocklist,omitempty"`
+	Workarounds    Workarounds     `yaml:"workarounds"`
 }
 
 type Workarounds struct {
@@ -94,6 +98,13 @@ func (r RegisterAddr) GetModFunction() (modFunction uint64, err error) {
 func (r RegisterAddr) GetModAddress() (modAddress uint64, err error) {
 	modAddress, err = strconv.ParseUint(fmt.Sprint(r)[1:], 10, 64)
 	return modAddress, err
+}
+
+// RegisterRange specifies a range of Modbus registers. Start and End must share
+// the same function code (first digit).
+type RegisterRange struct {
+	Start RegisterAddr `yaml:"start"`
+	End   RegisterAddr `yaml:"end"`
 }
 
 // ModbusDataType is an Enum, representing the possible data types a register
@@ -249,6 +260,11 @@ type MetricDef struct {
 
 	// Scaling factor
 	Factor *float64 `yaml:"factor,omitempty"`
+
+	// RangeBlacklist marks this metric so it won't be included when generating
+	// register ranges. This is useful for devices that respond with errors if
+	// neighbouring registers are queried together.
+	RangeBlacklist bool `yaml:"rangeBlacklist,omitempty"`
 }
 
 // Validate semantically validates the given metric definition.
@@ -341,6 +357,14 @@ func (s *Module) validate() error {
 	for _, def := range s.Metrics {
 		if err := def.validate(); err != nil {
 			return fmt.Errorf("failed to validate module %v: %v", s.Name, err)
+		}
+	}
+
+	for _, r := range s.RangeBlocklist {
+		sF, errS := r.Start.GetModFunction()
+		eF, errE := r.End.GetModFunction()
+		if errS != nil || errE != nil || sF != eF {
+			err = multierror.Append(err, fmt.Errorf("invalid rangeBlocklist entry in module %s", s.Name))
 		}
 	}
 
