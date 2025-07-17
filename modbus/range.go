@@ -11,23 +11,23 @@ import (
 // Range defines a Modbus range that includes a Modbus function and associated metric definitions.
 // metric definitions is a slice of continuous or semi-continuous(based on sensitivity) definition interval.
 type Range struct {
-	F           modbusFunc
-	definitions [][]config.MetricDef
+	ReadFunction      modbusFunc
+	metricDefinitions [][]config.MetricDef
 }
 
 // RangeMap represents a mapping of Modbus function codes to corresponding Range objects.
 type RangeMap map[uint64]Range
 
-func generateRangeMap(definitions []config.MetricDef, c modbus.Client, sensitivity uint64, blocklist []config.RegisterRange) (rangeMap RangeMap, err error) {
-	rangeMap = initializeRangeMap(c)
+func generateRangeMap(metricDefinitions []config.MetricDef, client modbus.Client, sensitivity uint64, blockedRanges []config.RegisterRange) (rangeMap RangeMap, err error) {
+	rangeMap = initializeRangeMap(client)
 
-	sort.Slice(definitions, func(i, j int) bool {
-		iAddress, _ := definitions[i].Address.GetModAddress()
-		jAddress, _ := definitions[j].Address.GetModAddress()
+	sort.Slice(metricDefinitions, func(i, j int) bool {
+		iAddress, _ := metricDefinitions[i].Address.GetModAddress()
+		jAddress, _ := metricDefinitions[j].Address.GetModAddress()
 		return iAddress < jAddress
 	})
 
-	for _, definition := range definitions {
+	for _, definition := range metricDefinitions {
 		if definition.RangeBlacklist {
 			continue
 		}
@@ -39,23 +39,23 @@ func generateRangeMap(definitions []config.MetricDef, c modbus.Client, sensitivi
 		if err != nil {
 			return rangeMap, fmt.Errorf("can't generate range map: %v", err)
 		}
-		if len(r.definitions) == 0 {
-			r.definitions = append(r.definitions, []config.MetricDef{})
+		if len(r.metricDefinitions) == 0 {
+			r.metricDefinitions = append(r.metricDefinitions, []config.MetricDef{})
 		}
-		lastDefInterval := r.definitions[len(r.definitions)-1]
-		if len(lastDefInterval) == 0 {
-			lastDefInterval = append(lastDefInterval, definition)
-			r.definitions[len(r.definitions)-1] = lastDefInterval
+		lastDefinitionInterval := r.metricDefinitions[len(r.metricDefinitions)-1]
+		if len(lastDefinitionInterval) == 0 {
+			lastDefinitionInterval = append(lastDefinitionInterval, definition)
+			r.metricDefinitions[len(r.metricDefinitions)-1] = lastDefinitionInterval
 			rangeMap[modFunction] = r
 			continue
 		}
-		firstDef := lastDefInterval[0]
-		lastDef := lastDefInterval[len(lastDefInterval)-1]
-		firstDefAddress, err := firstDef.Address.GetModAddress()
+		firstDefinition := lastDefinitionInterval[0]
+		lastDefinition := lastDefinitionInterval[len(lastDefinitionInterval)-1]
+		firstDefinitionAddress, err := firstDefinition.Address.GetModAddress()
 		if err != nil {
 			return rangeMap, fmt.Errorf("can't generate range map: %v", err)
 		}
-		lastDefAddress, err := lastDef.Address.GetModAddress()
+		lastDefinitionAddress, err := lastDefinition.Address.GetModAddress()
 		if err != nil {
 			return rangeMap, fmt.Errorf("can't generate range map: %v", err)
 		}
@@ -63,22 +63,22 @@ func generateRangeMap(definitions []config.MetricDef, c modbus.Client, sensitivi
 		if err != nil {
 			return rangeMap, fmt.Errorf("can't generate range map: %v", err)
 		}
-		totalRangeOffset := uint16(modAddress-firstDefAddress) + definition.DataType.Offset()
-		if modAddress-lastDefAddress > sensitivity || totalRangeOffset > 2000 || rangeCrossesBlock(lastDefAddress, modAddress, modFunction, blocklist) {
-			r.definitions = append(r.definitions, []config.MetricDef{})
+		totalRangeOffset := uint16(modAddress-firstDefinitionAddress) + definition.DataType.Offset()
+		if modAddress-lastDefinitionAddress > sensitivity || totalRangeOffset > 2000 || rangeCrossesBlock(lastDefinitionAddress, modAddress, modFunction, blockedRanges) {
+			r.metricDefinitions = append(r.metricDefinitions, []config.MetricDef{})
 		}
-		r.definitions[len(r.definitions)-1] = append(r.definitions[len(r.definitions)-1], definition)
+		r.metricDefinitions[len(r.metricDefinitions)-1] = append(r.metricDefinitions[len(r.metricDefinitions)-1], definition)
 		rangeMap[modFunction] = r
 	}
 	return rangeMap, nil
 }
 
-func initializeRangeMap(c modbus.Client) RangeMap {
+func initializeRangeMap(client modbus.Client) RangeMap {
 	return RangeMap{
-		1: {F: c.ReadCoils},
-		2: {F: c.ReadDiscreteInputs},
-		3: {F: c.ReadHoldingRegisters},
-		4: {F: c.ReadInputRegisters},
+		1: {ReadFunction: client.ReadCoils},
+		2: {ReadFunction: client.ReadDiscreteInputs},
+		3: {ReadFunction: client.ReadHoldingRegisters},
+		4: {ReadFunction: client.ReadInputRegisters},
 	}
 }
 
@@ -90,28 +90,28 @@ func validateModFunction(rangeMap RangeMap, modFunction uint64) (Range, error) {
 	return rangeObj, nil
 }
 
-func rangeCrossesBlock(start, end, modFunction uint64, blocks []config.RegisterRange) bool {
+func rangeCrossesBlock(start, end, modFunction uint64, blockedRanges []config.RegisterRange) bool {
 	if start > end {
 		start, end = end, start
 	}
-	for _, b := range blocks {
-		startF, err := b.Start.GetModFunction()
+	for _, blockedRange := range blockedRanges {
+		startFunction, err := blockedRange.Start.GetModFunction()
 		if err != nil {
 			continue
 		}
-		endF, err := b.End.GetModFunction()
+		endFunction, err := blockedRange.End.GetModFunction()
 		if err != nil {
 			continue
 		}
-		if startF != endF || startF != modFunction {
+		if startFunction != endFunction || startFunction != modFunction {
 			continue
 		}
-		sAddr, _ := b.Start.GetModAddress()
-		eAddr, _ := b.End.GetModAddress()
-		if sAddr > eAddr {
-			sAddr, eAddr = eAddr, sAddr
+		startAddress, _ := blockedRange.Start.GetModAddress()
+		endAddress, _ := blockedRange.End.GetModAddress()
+		if startAddress > endAddress {
+			startAddress, endAddress = endAddress, startAddress
 		}
-		if start <= eAddr && end >= sAddr {
+		if start <= endAddress && end >= startAddress {
 			return true
 		}
 	}
@@ -121,7 +121,7 @@ func rangeCrossesBlock(start, end, modFunction uint64, blocks []config.RegisterR
 func scrapeMetricRange(r Range) ([]metric, error) {
 	var metrics []metric
 
-	for _, definitions := range r.definitions {
+	for _, definitions := range r.metricDefinitions {
 		first := definitions[0]
 		last := definitions[len(definitions)-1]
 		firstAddress, err := first.Address.GetModAddress()
@@ -135,7 +135,7 @@ func scrapeMetricRange(r Range) ([]metric, error) {
 		lastOffset := last.DataType.Offset()
 		totalOffset := uint16(lastAddress-firstAddress) + lastOffset
 
-		modBytes, err := r.F(uint16(firstAddress), totalOffset)
+		modBytes, err := r.ReadFunction(uint16(firstAddress), totalOffset)
 		if err != nil {
 			return nil, fmt.Errorf("can't read modbus registers for %s: %v", first.Name, err)
 		}

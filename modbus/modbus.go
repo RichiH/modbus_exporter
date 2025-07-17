@@ -250,12 +250,12 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client, m config.Mod
 		if err != nil {
 			return nil, err
 		}
-		for _, r := range rangeMap {
-			m, err := scrapeMetricRange(r)
+		for _, functionRange := range rangeMap {
+			rangeMetrics, err := scrapeMetricRange(functionRange)
 			if err != nil {
 				return nil, err
 			}
-			metrics = append(metrics, m...)
+			metrics = append(metrics, rangeMetrics...)
 		}
 	}
 
