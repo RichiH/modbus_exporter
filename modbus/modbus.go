@@ -23,7 +23,6 @@ import (
 
 	"github.com/RichiH/modbus_exporter/config"
 	"github.com/goburrow/modbus"
-	"sort"
 )
 
 const (
@@ -42,7 +41,7 @@ func getUseRange(m config.Module, c config.Config) bool {
 	return r
 }
 
-func getRangeSensibility(m config.Module, c config.Config) uint64 {
+func getRangeSensitivity(m config.Module, c config.Config) uint64 {
 	s := rangeDefaultSensitivity
 	if c.RangeSensitivity != 0 {
 		s = c.RangeSensitivity
@@ -193,84 +192,6 @@ func keys(m map[string]string) []string {
 	return keys
 }
 
-func generateRangeMap(definitions []config.MetricDef, c modbus.Client, sensitivity uint64) (rangeMap RangeMap, err error) {
-	//init rangeMap
-	rangeMap = initializeRangeMap(c)
-
-	//sort slice based on modAddress
-	sort.Slice(definitions, func(i, j int) bool {
-		iAddress, _ := definitions[i].Address.GetModAddress()
-		jAddress, _ := definitions[j].Address.GetModAddress()
-		return iAddress < jAddress
-	})
-
-	for _, definition := range definitions {
-		modFunction, err := definition.Address.GetModFunction()
-		if err != nil {
-			return rangeMap, fmt.Errorf("can't generate range map: %v", err)
-		}
-		r, err := validateModFunction(rangeMap, modFunction)
-		if err != nil {
-			return rangeMap, fmt.Errorf("can't generate range map: %v", err)
-		}
-		//if range definitions contain no interval add an empty interval
-		if len(r.definitions) == 0 {
-			r.definitions = append(r.definitions, []config.MetricDef{})
-		}
-		lastDefInterval := r.definitions[len(r.definitions)-1]
-		//if last interval have no content add definition to it and skip
-		if len(lastDefInterval) == 0 {
-			lastDefInterval = append(lastDefInterval, definition)
-			r.definitions[len(r.definitions)-1] = lastDefInterval
-			rangeMap[modFunction] = r
-			continue
-		}
-		firstDef := lastDefInterval[0]
-		lastDef := lastDefInterval[len(lastDefInterval)-1]
-		firstDefAddress, err := firstDef.Address.GetModAddress()
-		if err != nil {
-			return rangeMap, fmt.Errorf("can't generate range map: %v", err)
-		}
-		lastDefAddress, err := lastDef.Address.GetModAddress()
-		if err != nil {
-			return rangeMap, fmt.Errorf("can't generate range map: %v", err)
-		}
-		modAddress, err := definition.Address.GetModAddress()
-		if err != nil {
-			return rangeMap, fmt.Errorf("can't generate range map: %v", err)
-		}
-		//calculate current total offset for the current open interval
-		//if offset is more than 2000 can't be handled only in 1 request so a new interval is opened
-		totalRangeOffset := uint16(modAddress-firstDefAddress) + definition.DataType.Offset()
-		if modAddress-lastDefAddress > sensitivity || totalRangeOffset > 2000 {
-			r.definitions = append(r.definitions, []config.MetricDef{})
-		}
-		//add definition to last open interval
-		r.definitions[len(r.definitions)-1] = append(r.definitions[len(r.definitions)-1], definition)
-		rangeMap[modFunction] = r
-	}
-	return rangeMap, nil
-}
-
-// Initializes the RangeMap with predefined Modbus functions
-func initializeRangeMap(c modbus.Client) RangeMap {
-	return RangeMap{
-		1: {F: c.ReadCoils},
-		2: {F: c.ReadDiscreteInputs},
-		3: {F: c.ReadHoldingRegisters},
-		4: {F: c.ReadInputRegisters},
-	}
-}
-
-// Validates if the modFunction exists in the rangeMap and returns the Range object
-func validateModFunction(rangeMap RangeMap, modFunction uint64) (Range, error) {
-	rangeObj, ok := rangeMap[modFunction]
-	if !ok {
-		return Range{}, fmt.Errorf("invalid modFunction: %v", modFunction)
-	}
-	return rangeObj, nil
-}
-
 func scrapeMetrics(definitions []config.MetricDef, c modbus.Client, m config.Module, conf config.Config) ([]metric, error) {
 	metrics := []metric{}
 
@@ -325,16 +246,16 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client, m config.Mod
 			metrics = append(metrics, m)
 		}
 	} else {
-		rangeMap, err := generateRangeMap(definitions, c, getRangeSensibility(m, conf))
+		rangeMap, err := generateRangeMap(definitions, c, getRangeSensitivity(m, conf), m.RangeBlocklist)
 		if err != nil {
 			return nil, err
 		}
-		for _, r := range rangeMap {
-			m, err := scrapeMetricRange(r)
+		for _, functionRange := range rangeMap {
+			rangeMetrics, err := scrapeMetricRange(functionRange)
 			if err != nil {
 				return nil, err
 			}
-			metrics = append(metrics, m...)
+			metrics = append(metrics, rangeMetrics...)
 		}
 	}
 
@@ -366,52 +287,6 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc, modAddress uint64) 
 	}
 
 	return metric{definition.Name, definition.Help, definition.Labels, v, definition.MetricType}, nil
-}
-
-// scrapeMetricRange retrieves and parses Modbus register data for a given range and returns metrics or an error.
-// It computes offsets, fetches register bytes using a Modbus function, and converts data using metric definitions.
-// It auto handle "dirty" registry and parse only interested data.
-func scrapeMetricRange(r Range) ([]metric, error) {
-	var metrics []metric
-
-	for _, definitions := range r.definitions {
-		first := definitions[0]
-		last := definitions[len(definitions)-1]
-		firstAddress, err := first.Address.GetModAddress()
-		if err != nil {
-			return nil, fmt.Errorf("can't calculate mod address for %s: %v", first.Name, err)
-		}
-		lastAddress, err := last.Address.GetModAddress()
-		if err != nil {
-			return nil, fmt.Errorf("can't calculate mod address for %s: %v", last.Name, err)
-		}
-		lastOffset := last.DataType.Offset()
-		totalOffset := uint16(lastAddress-firstAddress) + lastOffset
-
-		//get all bytes from the first registry to the last
-		modBytes, err := r.F(uint16(firstAddress), totalOffset)
-		if err != nil {
-			return nil, fmt.Errorf("can't read modbus registers for %s: %v", first.Name, err)
-		}
-
-		//for each definition extract interested bytes and parse to a metric
-		for _, definition := range definitions {
-			modAddress, err := definition.Address.GetModAddress()
-			if err != nil {
-				return nil, fmt.Errorf("can't calculate mod address for %s: %v", definition.Name, err)
-			}
-			start := (modAddress - firstAddress) * 2
-			end := uint16(start) + (definition.DataType.Offset() * 2)
-			defBytes := modBytes[start:end]
-			v, err := parseModbusData(definition, defBytes)
-			if err != nil {
-				return nil, fmt.Errorf("can't parse modbus data for %s: %v", definition.Name, err)
-			}
-			metrics = append(metrics, metric{definition.Name, definition.Help, definition.Labels, v, definition.MetricType})
-		}
-	}
-
-	return metrics, nil
 }
 
 // InsufficientRegistersError is returned in Parse() whenever not enough
