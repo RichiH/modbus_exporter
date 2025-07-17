@@ -17,7 +17,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
-	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -25,6 +24,33 @@ import (
 	"github.com/RichiH/modbus_exporter/config"
 	"github.com/goburrow/modbus"
 )
+
+const (
+	rangeDefaultSensitivity uint64 = 10
+	useRangeDefault                = true
+)
+
+func getUseRange(m config.Module, c config.Config) bool {
+	r := useRangeDefault
+	if c.UseRanges != nil {
+		r = *c.UseRanges
+	}
+	if m.UseRanges != nil {
+		r = *m.UseRanges
+	}
+	return r
+}
+
+func getRangeSensitivity(m config.Module, c config.Config) uint64 {
+	s := rangeDefaultSensitivity
+	if c.RangeSensitivity != 0 {
+		s = c.RangeSensitivity
+	}
+	if m.RangeSensitivity != 0 {
+		s = m.RangeSensitivity
+	}
+	return s
+}
 
 // Exporter represents a Prometheus exporter converting modbus information
 // retrieved from remote targets via TCP as Prometheus style metrics.
@@ -72,16 +98,13 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 
 	// Close tcp connection.
 	defer handler.Close()
-
-	metrics, err := scrapeMetrics(module.Metrics, c)
+	metrics, err := scrapeMetrics(module.Metrics, c, *module, e.Config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to scrape metrics for module '%v': %v", moduleName, err.Error())
 	}
-
 	if err := registerMetrics(reg, moduleName, metrics); err != nil {
 		return nil, fmt.Errorf("failed to register metrics for module %v: %v", moduleName, err.Error())
 	}
-
 	return reg, nil
 }
 
@@ -169,58 +192,71 @@ func keys(m map[string]string) []string {
 	return keys
 }
 
-func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, error) {
+func scrapeMetrics(definitions []config.MetricDef, c modbus.Client, m config.Module, conf config.Config) ([]metric, error) {
 	metrics := []metric{}
 
 	if len(definitions) == 0 {
 		return []metric{}, nil
 	}
+	if !getUseRange(m, conf) {
+		for _, definition := range definitions {
+			var f modbusFunc
 
-	for _, definition := range definitions {
-		var f modbusFunc
+			// Here we are parcing Modbus Address from config file
+			// for function code and register address
+			modFunction, err := definition.Address.GetModFunction()
+			if err != nil {
+				return []metric{}, fmt.Errorf("modbus function code parcing failed: %v", modFunction)
+			}
 
-		// Here we are parcing Modbus Address from config file
-		// for function code and register address
-		modFunction, err := strconv.ParseUint(fmt.Sprint(definition.Address)[0:1], 10, 64)
+			// And here we are parcing Modbus Address from config file
+			// for register address
+			modAddress, err := definition.Address.GetModAddress()
+			if err != nil {
+				return []metric{}, fmt.Errorf("modbus register address parcing failed  %v", modAddress)
+			}
+
+			if modAddress > 65535 {
+				return []metric{}, fmt.Errorf("modbus register address is out of range: %v", definition.Address)
+			}
+
+			switch modFunction {
+			case 1:
+				f = c.ReadCoils
+			case 2:
+				f = c.ReadDiscreteInputs
+			case 3:
+				f = c.ReadHoldingRegisters
+			case 4:
+				f = c.ReadInputRegisters
+			default:
+				return []metric{}, fmt.Errorf(
+					"metric: '%v', address '%v': metric address should be within the range of 10 - 465535."+
+						"'1xxxxx' for read coil / digital output, '2xxxxx' for read discrete inputs / digital input,"+
+						"'3xxxxx' read holding registers / analog output, '4xxxxx' read input registers / analog input",
+					definition.Name, definition.Address,
+				)
+			}
+
+			m, err := scrapeMetric(definition, f, modAddress)
+			if err != nil {
+				return []metric{}, fmt.Errorf("metric '%v', address '%v': %v", definition.Name, definition.Address, err)
+			}
+
+			metrics = append(metrics, m)
+		}
+	} else {
+		rangeMap, err := generateRangeMap(definitions, c, getRangeSensitivity(m, conf), m.RangeBlocklist)
 		if err != nil {
-			return []metric{}, fmt.Errorf("modbus function code parcing failed: %v", modFunction)
+			return nil, err
 		}
-
-		// And here we are parcing Modbus Address from config file
-		// for register address
-		modAddress, err := strconv.ParseUint(fmt.Sprint(definition.Address)[1:], 10, 64)
-		if err != nil {
-			return []metric{}, fmt.Errorf("modbus register address parcing failed  %v", modAddress)
+		for _, functionRange := range rangeMap {
+			rangeMetrics, err := scrapeMetricRange(functionRange)
+			if err != nil {
+				return nil, err
+			}
+			metrics = append(metrics, rangeMetrics...)
 		}
-
-		if modAddress > 65535 {
-			return []metric{}, fmt.Errorf("modbus register address is out of range: %v", definition.Address)
-		}
-
-		switch modFunction {
-		case 1:
-			f = c.ReadCoils
-		case 2:
-			f = c.ReadDiscreteInputs
-		case 3:
-			f = c.ReadHoldingRegisters
-		case 4:
-			f = c.ReadInputRegisters
-		default:
-			return []metric{}, fmt.Errorf(
-				"metric: '%v', address '%v': metric address should be within the range of 10 - 465535."+
-					"'1xxxxx' for read coil / digital output, '2xxxxx' for read discrete inputs / digital input,"+
-					"'3xxxxx' read holding registers / analog output, '4xxxxx' read input registers / analog input",
-				definition.Name, definition.Address,
-			)
-		}
-
-		m, err := scrapeMetric(definition, f, modAddress)
-		if err != nil {
-			return []metric{}, fmt.Errorf("metric '%v', address '%v': %v", definition.Name, definition.Address, err)
-		}
-
-		metrics = append(metrics, m)
 	}
 
 	return metrics, nil
@@ -236,19 +272,7 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc, modAddress uint64) 
 	// For future reference, the maximum for digital in/output is 2000 registers,
 	// the maximum for analog in/output is 125.
 	var div uint16
-	switch definition.DataType {
-	case config.ModbusFloat16,
-		config.ModbusInt16,
-		config.ModbusBool,
-		config.ModbusUInt16:
-		div = uint16(1)
-	case config.ModbusFloat32,
-		config.ModbusInt32,
-		config.ModbusUInt32:
-		div = uint16(2)
-	default:
-		div = uint16(4)
-	}
+	div = definition.DataType.Offset()
 
 	// TODO: We could cache the results to not repeat overlapping ones.
 
