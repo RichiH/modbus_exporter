@@ -53,14 +53,14 @@ func main() {
 	kingpin.Parse()
 	logger := promlog.New(promlogConfig)
 
-	level.Info(logger).Log("msg", "Starting modbus_exporter", "version", version.Info())
-	level.Info(logger).Log("build_context", version.BuildContext())
+	_ = level.Info(logger).Log("msg", "Starting modbus_exporter", "version", version.Info())
+	_ = level.Info(logger).Log("build_context", version.BuildContext())
 
 	telemetryRegistry := prometheus.NewRegistry()
 	telemetryRegistry.MustRegister(collectors.NewGoCollector())
 	telemetryRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	level.Info(logger).Log("msg", "Loading configuration file(s)", "config_file", strings.Join(*configFile, ", "))
+	_ = level.Info(logger).Log("msg", "Loading configuration file(s)", "config_file", strings.Join(*configFile, ", "))
 	config, err := config.LoadConfig(*configFile)
 	if err != nil {
 		level.Error(logger).Log("msg", "Error loading config", "err", err)
