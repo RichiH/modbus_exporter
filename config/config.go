@@ -75,6 +75,7 @@ type Workarounds struct {
 	SleepAfterConnect     time.Duration `yaml:"sleepAfterConnect"`
 	ScrapeErrorRetryCount int           `yaml:"scrapeErrorRetryCount"` // Default value 3
 	ScrapeErrorWait       int           `yaml:"scrapeErrorWait"`       // In milliseconds, default value 100
+	ScrapeInterludeWait   time.Duration `yaml:"scrapeInterludeWait"`   // default value 0
 }
 
 // RegisterAddr specifies the register in the possible output of _digital
