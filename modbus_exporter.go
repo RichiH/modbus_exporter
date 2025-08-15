@@ -53,17 +53,17 @@ func main() {
 	kingpin.Parse()
 	logger := promlog.New(promlogConfig)
 
-	level.Info(logger).Log("msg", "Starting modbus_exporter", "version", version.Info())
-	level.Info(logger).Log("build_context", version.BuildContext())
+	_ = level.Info(logger).Log("msg", "Starting modbus_exporter", "version", version.Info())
+	_ = level.Info(logger).Log("build_context", version.BuildContext())
 
 	telemetryRegistry := prometheus.NewRegistry()
 	telemetryRegistry.MustRegister(collectors.NewGoCollector())
 	telemetryRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	level.Info(logger).Log("msg", "Loading configuration file(s)", "config_file", strings.Join(*configFile, ", "))
+	_ = level.Info(logger).Log("msg", "Loading configuration file(s)", "config_file", strings.Join(*configFile, ", "))
 	config, err := config.LoadConfig(*configFile)
 	if err != nil {
-		level.Error(logger).Log("msg", "Error loading config", "err", err)
+		_ = level.Error(logger).Log("msg", "Error loading config", "err", err)
 		os.Exit(1)
 	}
 
@@ -78,7 +78,7 @@ func main() {
 
 	srv := &http.Server{}
 	if err := web.ListenAndServe(srv, toolkitFlags, logger); err != nil {
-		level.Error(logger).Log("msg", "Error starting HTTP server", "err", err)
+		_ = level.Error(logger).Log("msg", "Error starting HTTP server", "err", err)
 		os.Exit(1)
 	}
 }
@@ -117,7 +117,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 		return
 	}
 
-	level.Info(logger).Log("msg", "got scrape request", "module", moduleName, "target", target, "sub_target", subTarget)
+	_ = level.Info(logger).Log("msg", "got scrape request", "module", moduleName, "target", target, "sub_target", subTarget)
 
 	gatherer, err := e.Scrape(target, byte(subTarget), moduleName) // Scrape
 
@@ -135,11 +135,11 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 
 	if ScrapeErrorRetryCount == 0 { // if unset or 0, set to 3 retries
 		ScrapeErrorRetryCount = 3
-		level.Error(logger).Log("msg", "ScrapeErrorRetryCount: Scrape retry count is unset, using default value 3", "target", target, "module", moduleName, "err", err)
+		_ = level.Error(logger).Log("msg", "ScrapeErrorRetryCount: Scrape retry count is unset, using default value 3", "target", target, "module", moduleName, "err", err)
 	}
 	if ScrapeErrorWait == 0 { // If unset or 0, wait 100 milliseconds
 		ScrapeErrorWait = 100
-		level.Error(logger).Log("msg", "ScrapeErrorWait: Scrape retry waiting time is unset, using default value 100", "target", target, "module", moduleName, "err", err)
+		_ = level.Error(logger).Log("msg", "ScrapeErrorWait: Scrape retry waiting time is unset, using default value 100", "target", target, "module", moduleName, "err", err)
 	}
 
 	for i := 1; i <= ScrapeErrorRetryCount; i++ { // Retry x times until giving up and returning error
@@ -168,7 +168,7 @@ func scrapeHandler(e *modbus.Exporter, w http.ResponseWriter, r *http.Request, l
 			fmt.Sprintf("failed to scrape target '%v' with module '%v': %v", target, moduleName, err),
 			httpStatus,
 		)
-		level.Error(logger).Log("msg", "failed to scrape", "target", target, "module", moduleName, "err", err)
+		_ = level.Error(logger).Log("msg", "failed to scrape", "target", target, "module", moduleName, "err", err)
 		return
 	}
 
