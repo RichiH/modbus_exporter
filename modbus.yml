@@ -56,3 +56,15 @@ modules:
         dataType: bool
         bitOffset: 0
         metricType: gauge
+
+      - name: "some_special_device_with_buggy_values"
+        help: "some help for some coil"
+        address: 301220
+        dataType: int16
+        metricType: counter
+        ignoredValues:
+        - value: 4294934512
+          meaning: Data pending, acquisition in progress
+        - value: 4294934513
+          meaning: Reserved
+
