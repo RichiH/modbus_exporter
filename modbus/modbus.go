@@ -26,6 +26,20 @@ import (
 	"github.com/goburrow/modbus"
 )
 
+func cloneLabels(src map[string]string) map[string]string {
+	if src == nil {
+		// map empty, ready to use
+		return make(map[string]string)
+	}
+
+	// pre‑allocation a new place for futur label «module»
+	dst := make(map[string]string, len(src)+1)
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
 // Exporter represents a Prometheus exporter converting modbus information
 // retrieved from remote targets via TCP as Prometheus style metrics.
 type Exporter struct {
