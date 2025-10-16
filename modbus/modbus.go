@@ -104,10 +104,8 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 	registeredCounters := map[string]*prometheus.CounterVec{}
 
 	for _, m := range metrics {
-		if m.Labels == nil {
-			m.Labels = map[string]string{}
-		}
-		m.Labels["module"] = moduleName
+		lbl := cloneLabels(m.Labels)
+		lbl["module"] = moduleName
 
 		switch m.MetricType {
 		case config.MetricTypeGauge:
@@ -118,7 +116,7 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 				collector = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 					Name: m.Name,
 					Help: m.Help,
-				}, keys(m.Labels))
+				}, keys(lbl))
 
 				if err := reg.Register(collector); err != nil {
 					return fmt.Errorf("failed to register metric %v: %v", m.Name, err.Error())
@@ -127,7 +125,8 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 				registeredGauges[m.Name] = collector
 			}
 
-			collector.With(m.Labels).Set(m.Value)
+			//collector.With(m.Labels).Set(m.Value)
+			collector.With(lbl).Set(m.Value)
 		case config.MetricTypeCounter:
 			// Make sure not to register the same metric twice.
 			collector, ok := registeredCounters[m.Name]
@@ -136,7 +135,7 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 				collector = prometheus.NewCounterVec(prometheus.CounterOpts{
 					Name: m.Name,
 					Help: m.Help,
-				}, keys(m.Labels))
+				}, keys(lbl))
 
 				if err := reg.Register(collector); err != nil {
 					return fmt.Errorf("failed to register metric %v: %v", m.Name, err.Error())
@@ -158,13 +157,13 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 					}
 				}()
 
-				collector.With(m.Labels).Add(m.Value)
+				collector.With(lbl).Add(m.Value)
 			}()
 
 			if err != nil {
 				return fmt.Errorf(
 					"metric '%v', type '%v', value '%v', labels '%v': %v",
-					m.Name, m.MetricType, m.Value, m.Labels, err,
+					m.Name, m.MetricType, m.Value, lbl, err,
 				)
 			}
 		}
