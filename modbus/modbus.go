@@ -289,7 +289,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 			}
 
 			// Convert byte to uint16
-			data := uint16(rawData[0])
+			data := binary.BigEndian.Uint16(rawData)
 
 			if data&(uint16(1)<<uint16(*d.BitOffset)) > 0 {
 				return float64(1), nil
