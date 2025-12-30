@@ -15,6 +15,7 @@ package config
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	multierror "github.com/hashicorp/go-multierror"
@@ -22,7 +23,9 @@ import (
 
 // Config represents the configuration of the modbus exporter.
 type Config struct {
-	Modules []Module `yaml:"modules"`
+	Modules          []Module `yaml:"modules"`
+	UseRanges        *bool    `yaml:"useRanges"`
+	RangeSensitivity uint64   `yaml:"rangeSensitivity"`
 }
 
 // validate semantically validates the given config.
@@ -60,15 +63,21 @@ type ListTargets map[string]*Module
 
 // Module defines the configuration parameters of a modbus module.
 type Module struct {
-	Name        string         `yaml:"name"`
-	Protocol    ModbusProtocol `yaml:"protocol"`
-	Timeout     int            `yaml:"timeout"`
-	Baudrate    int            `yaml:"baudrate"`
-	Databits    int            `yaml:"databits"`
-	Stopbits    int            `yaml:"stopbits"`
-	Parity      string         `yaml:"parity"`
-	Metrics     []MetricDef    `yaml:"metrics"`
-	Workarounds Workarounds    `yaml:"workarounds"`
+	Name             string         `yaml:"name"`
+	UseRanges        *bool          `yaml:"useRanges"`
+	RangeSensitivity uint64         `yaml:"rangeSensitivity"`
+	Protocol         ModbusProtocol `yaml:"protocol"`
+	Timeout          int            `yaml:"timeout"`
+	Baudrate         int            `yaml:"baudrate"`
+	Databits         int            `yaml:"databits"`
+	Stopbits         int            `yaml:"stopbits"`
+	Parity           string         `yaml:"parity"`
+	Metrics          []MetricDef    `yaml:"metrics"`
+	// RangeBlocklist defines register ranges that should never be included
+	// when forming automatic ranges. Each range must refer to a single
+	// Modbus function (first digit of the address).
+	RangeBlocklist []RegisterRange `yaml:"rangeBlocklist,omitempty"`
+	Workarounds    Workarounds     `yaml:"workarounds"`
 }
 
 type Workarounds struct {
@@ -80,6 +89,23 @@ type Workarounds struct {
 // RegisterAddr specifies the register in the possible output of _digital
 // output_, _digital input, _ananlog input, _analog output_.
 type RegisterAddr uint32
+
+func (r RegisterAddr) GetModFunction() (modFunction uint64, err error) {
+	modFunction, err = strconv.ParseUint(fmt.Sprint(r)[0:1], 10, 64)
+	return modFunction, err
+}
+
+func (r RegisterAddr) GetModAddress() (modAddress uint64, err error) {
+	modAddress, err = strconv.ParseUint(fmt.Sprint(r)[1:], 10, 64)
+	return modAddress, err
+}
+
+// RegisterRange specifies a range of Modbus registers. Start and End must share
+// the same function code (first digit).
+type RegisterRange struct {
+	Start RegisterAddr `yaml:"start"`
+	End   RegisterAddr `yaml:"end"`
+}
 
 // ModbusDataType is an Enum, representing the possible data types a register
 // value can be interpreted as.
@@ -112,6 +138,23 @@ func (t *ModbusDataType) validate() error {
 	return fmt.Errorf("expected one of the following data types %v but got '%v'",
 		possibleModbusDataTypes,
 		*t)
+}
+
+// Offset calculates and returns the register offset size based on the ModbusDataType value.
+func (t *ModbusDataType) Offset() uint16 {
+	switch *t {
+	case ModbusFloat16,
+		ModbusInt16,
+		ModbusBool,
+		ModbusUInt16:
+		return uint16(1)
+	case ModbusFloat32,
+		ModbusInt32,
+		ModbusUInt32:
+		return uint16(2)
+	default:
+		return uint16(4)
+	}
 }
 
 const (
@@ -217,6 +260,11 @@ type MetricDef struct {
 
 	// Scaling factor
 	Factor *float64 `yaml:"factor,omitempty"`
+
+	// RangeBlacklist marks this metric so it won't be included when generating
+	// register ranges. This is useful for devices that respond with errors if
+	// neighbouring registers are queried together.
+	RangeBlacklist bool `yaml:"rangeBlacklist,omitempty"`
 }
 
 // Validate semantically validates the given metric definition.
@@ -309,6 +357,14 @@ func (s *Module) validate() error {
 	for _, def := range s.Metrics {
 		if err := def.validate(); err != nil {
 			return fmt.Errorf("failed to validate module %v: %v", s.Name, err)
+		}
+	}
+
+	for _, r := range s.RangeBlocklist {
+		sF, errS := r.Start.GetModFunction()
+		eF, errE := r.End.GetModFunction()
+		if errS != nil || errE != nil || sF != eF {
+			err = multierror.Append(err, fmt.Errorf("invalid rangeBlocklist entry in module %s", s.Name))
 		}
 	}
 
