@@ -85,9 +85,17 @@ Flags:
       --[no-]version             Show application version.
 
 ```
-Visit http://localhost:9602/modbus?target=1.2.3.4:502&module=fake&sub_target=1 where 1.2.3.4:502 is the IP and port number of the modbus IP device to get metrics from,
-while module and sub_target parameters specify which module and subtarget to use from the config file.
+Visit http://localhost:9602/modbus?module=fake&target=1.2.3.4:502&sub_target=1 where:
+
+- the `module` parameter specifies which module to use from the config file;
+- the `target` parameter specifies the IP and port number of the modbus IP device to get metrics from, e.g. `1.2.3.4:502`;
+- the `sub_target` specifies the slave address/id to use in the modbus request;
+
 If your device doesn't use sub-targets you can usually just set it to 1.
+
+Note `target` and `sub_target` may be provided per-module in the config,
+in which case the respective value in the request is ignored.
+This is useful e.g. if you only have one device per module and don't want to accept the IP address in the request.
 
 Visit http://localhost:9602/metrics to get the metrics of the exporter itself.
 

@@ -62,6 +62,8 @@ type ListTargets map[string]*Module
 type Module struct {
 	Name        string         `yaml:"name"`
 	Protocol    ModbusProtocol `yaml:"protocol"`
+	Target      *string        `yaml:"target"`
+	SubTarget   *uint8         `yaml:"subTarget"`
 	Timeout     int            `yaml:"timeout"`
 	Baudrate    int            `yaml:"baudrate"`
 	Databits    int            `yaml:"databits"`
