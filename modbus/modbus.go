@@ -73,7 +73,7 @@ func (e *Exporter) Scrape(targetAddress string, subTarget byte, moduleName strin
 	// Close tcp connection.
 	defer handler.Close()
 
-	metrics, err := scrapeMetrics(module.Metrics, c)
+	metrics, err := scrapeMetrics(module.Metrics, c, module.Workarounds.ScrapeInterludeWait)
 	if err != nil {
 		return nil, fmt.Errorf("failed to scrape metrics for module '%v': %v", moduleName, err.Error())
 	}
@@ -169,7 +169,7 @@ func keys(m map[string]string) []string {
 	return keys
 }
 
-func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, error) {
+func scrapeMetrics(definitions []config.MetricDef, c modbus.Client, interludewait time.Duration) ([]metric, error) {
 	metrics := []metric{}
 
 	if len(definitions) == 0 {
@@ -221,6 +221,8 @@ func scrapeMetrics(definitions []config.MetricDef, c modbus.Client) ([]metric, e
 		}
 
 		metrics = append(metrics, m)
+		// Some controllers need an interlude timeout between queries
+		time.Sleep(interludewait)
 	}
 
 	return metrics, nil
