@@ -16,6 +16,7 @@ package modbus
 import (
 	"encoding/binary"
 	"fmt"
+	"maps"
 	"math"
 	"strconv"
 	"time"
@@ -90,9 +91,6 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 	registeredCounters := map[string]*prometheus.CounterVec{}
 
 	for _, m := range metrics {
-		if m.Labels == nil {
-			m.Labels = map[string]string{}
-		}
 		m.Labels["module"] = moduleName
 
 		switch m.MetricType {
@@ -264,7 +262,7 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc, modAddress uint64) 
 		return metric{}, err
 	}
 
-	return metric{definition.Name, definition.Help, definition.Labels, v, definition.MetricType}, nil
+	return metric{definition.Name, definition.Help, maps.Clone(definition.Labels), v, definition.MetricType}, nil
 }
 
 // InsufficientRegistersError is returned in Parse() whenever not enough
