@@ -16,6 +16,7 @@ package modbus
 import (
 	"encoding/binary"
 	"errors"
+	"maps"
 	"math"
 	"testing"
 
@@ -606,4 +607,130 @@ func TestRegisterMetricsRecoverNegativeCounter(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error but got nil")
 	}
+}
+
+func TestScrapeMetricSpecialValues(t *testing.T) {
+	special := 65535.0
+	scaled := 5.0
+	factor := 0.5
+
+	tests := []struct {
+		name     string
+		raw      []byte
+		def      config.MetricDef
+		expected metric
+	}{
+		{
+			name: "raw value matches, factor ignored for comparison",
+			raw:  []byte{0xff, 0xff},
+			def: config.MetricDef{
+				Name:          "watt_hours",
+				Labels:        map[string]string{"phase": "1"},
+				Address:       301220,
+				DataType:      config.ModbusUInt16,
+				MetricType:    config.MetricTypeCounter,
+				Factor:        &factor,
+				SpecialValues: []config.SpecialValueDef{{Value: &special, Meaning: "data pending"}},
+			},
+			expected: metric{
+				Name:       config.SpecialValueMetricName,
+				Help:       specialValueHelp,
+				Labels:     map[string]string{"reading": "watt_hours", "address": "301220", "meaning": "data pending"},
+				Value:      65535,
+				MetricType: config.MetricTypeGauge,
+			},
+		},
+		{
+			name: "scaled value matching a special value is not caught",
+			raw:  []byte{0x00, 0x0a},
+			def: config.MetricDef{
+				Name:          "watt_hours",
+				Address:       301220,
+				DataType:      config.ModbusUInt16,
+				MetricType:    config.MetricTypeCounter,
+				Factor:        &factor,
+				SpecialValues: []config.SpecialValueDef{{Value: &scaled, Meaning: "data pending"}},
+			},
+			expected: metric{
+				Name:       "watt_hours",
+				Value:      5,
+				MetricType: config.MetricTypeCounter,
+			},
+		},
+		{
+			name: "no special values configured",
+			raw:  []byte{0xff, 0xff},
+			def: config.MetricDef{
+				Name:       "watt_hours",
+				Address:    301220,
+				DataType:   config.ModbusUInt16,
+				MetricType: config.MetricTypeCounter,
+			},
+			expected: metric{
+				Name:       "watt_hours",
+				Value:      65535,
+				MetricType: config.MetricTypeCounter,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			f := func(address, quantity uint16) ([]byte, error) {
+				return test.raw, nil
+			}
+
+			m, err := scrapeMetric(test.def, f, 1220)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if m.Name != test.expected.Name || m.Help != test.expected.Help ||
+				m.Value != test.expected.Value || m.MetricType != test.expected.MetricType {
+				t.Fatalf("expected %+v but got %+v", test.expected, m)
+			}
+
+			if test.expected.Labels != nil && !maps.Equal(m.Labels, test.expected.Labels) {
+				t.Fatalf("expected labels %v but got %v", test.expected.Labels, m.Labels)
+			}
+		})
+	}
+}
+
+func TestRegisterMetricsSpecialValueCaught(t *testing.T) {
+	reg := prometheus.NewRegistry()
+
+	metrics := []metric{
+		{
+			Name:       "power",
+			Labels:     map[string]string{"phase": "1"},
+			Value:      230,
+			MetricType: config.MetricTypeGauge,
+		},
+		newSpecialValueMetric(config.MetricDef{Name: "watt_hours", Address: 301220}, "data pending", 4294934512),
+		newSpecialValueMetric(config.MetricDef{Name: "voltage", Address: 301222}, "reserved", 65535),
+	}
+
+	if err := registerMetrics(reg, "my_module", metrics); err != nil {
+		t.Fatal(err)
+	}
+
+	metricFamilies, err := reg.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, mf := range metricFamilies {
+		if mf.GetName() != config.SpecialValueMetricName {
+			continue
+		}
+
+		if len(mf.Metric) != 2 {
+			t.Fatalf("expected 2 caught special values but got %v", len(mf.Metric))
+		}
+
+		return
+	}
+
+	t.Fatalf("expected metric family %v", config.SpecialValueMetricName)
 }
