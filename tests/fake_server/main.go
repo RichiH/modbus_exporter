@@ -27,6 +27,10 @@ func main() {
 	serv.HoldingRegisters[22] = uint16(240)
 	serv.HoldingRegisters[23] = uint16(250)
 	serv.Coils[24] = byte(1)
+	// Special value 4294934512 ("data pending" on e.g. ABB CMS-700), uint32
+	// spanning registers 25 and 26.
+	serv.HoldingRegisters[25] = uint16(0xffff)
+	serv.HoldingRegisters[26] = uint16(0x7ff0)
 	err := serv.ListenTCP(address)
 	if err != nil {
 		log.Printf("%v\n", err)

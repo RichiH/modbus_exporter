@@ -262,12 +262,38 @@ func scrapeMetric(definition config.MetricDef, f modbusFunc, modAddress uint64) 
 		return metric{}, err
 	}
 
-	v, err := parseModbusData(definition, modBytes)
+	raw, err := parseRawModbusData(definition, modBytes)
 	if err != nil {
 		return metric{}, err
 	}
 
+	for _, sv := range definition.SpecialValues {
+		if raw == *sv.Value {
+			return newSpecialValueMetric(definition, sv.Meaning, raw), nil
+		}
+	}
+
+	v := scaleValue(definition.Factor, raw)
+
 	return metric{definition.Name, definition.Help, definition.Labels, v, definition.MetricType}, nil
+}
+
+const specialValueHelp = "Raw value of a reading that matched a configured special value. The reading itself is omitted while this is present."
+
+// newSpecialValueMetric returns the metric exposing a caught special value
+// in place of the reading defined by definition.
+func newSpecialValueMetric(definition config.MetricDef, meaning string, raw float64) metric {
+	return metric{
+		Name: config.SpecialValueMetricName,
+		Help: specialValueHelp,
+		Labels: map[string]string{
+			"reading": definition.Name,
+			"address": fmt.Sprint(definition.Address),
+			"meaning": meaning,
+		},
+		Value:      raw,
+		MetricType: config.MetricTypeGauge,
+	}
 }
 
 // InsufficientRegistersError is returned in Parse() whenever not enough
@@ -281,11 +307,21 @@ func (e *InsufficientRegistersError) Error() string {
 	return fmt.Sprintf("insufficient amount of register data provided: %v", e.e)
 }
 
-// Parse parses the given byte slice based on the specified Modbus data type and
-// returns the parsed value as a float64 (Prometheus exposition format).
-//
-// TODO: Handle Endianness.
+// parseModbusData parses the given byte slice based on the specified Modbus
+// data type and returns the scaled value as a float64 (Prometheus exposition
+// format).
 func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
+	v, err := parseRawModbusData(d, rawData)
+	if err != nil {
+		return float64(0), err
+	}
+
+	return v, nil
+}
+
+// parseRawModbusData parses the given byte slice based on the specified Modbus
+// data type and returns the unscaled value as a float64.
+func parseRawModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 	switch d.DataType {
 	case config.ModbusBool:
 		{
@@ -331,7 +367,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint16(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(int16(data))), nil
+			return float64(int16(data)), nil
 		}
 	case config.ModbusUInt16:
 		{
@@ -343,7 +379,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint16(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(data)), nil
+			return float64(data), nil
 		}
 	case config.ModbusInt32:
 		{
@@ -355,7 +391,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(int32(data))), nil
+			return float64(int32(data)), nil
 		}
 	case config.ModbusUInt32:
 		{
@@ -367,7 +403,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(data)), nil
+			return float64(data), nil
 		}
 	case config.ModbusFloat32:
 		{
@@ -379,7 +415,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint32(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(math.Float32frombits(data))), nil
+			return float64(math.Float32frombits(data)), nil
 		}
 	case config.ModbusInt64:
 		{
@@ -391,7 +427,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(int64(data))), nil
+			return float64(int64(data)), nil
 		}
 	case config.ModbusUInt64:
 		{
@@ -403,7 +439,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return scaleValue(d.Factor, float64(data)), nil
+			return float64(data), nil
 		}
 	case config.ModbusFloat64:
 		{
@@ -415,7 +451,7 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), err
 			}
 			data := binary.BigEndian.Uint64(rawDataWithEndianness)
-			return scaleValue(d.Factor, math.Float64frombits(data)), nil
+			return math.Float64frombits(data), nil
 		}
 	default:
 		{

@@ -218,6 +218,21 @@ type MetricDef struct {
 
 	// Scaling factor
 	Factor *float64 `yaml:"factor,omitempty"`
+
+	// Raw values with a device specific meaning, e.g. "data pending". When
+	// the raw (unscaled) value matches, the metric is omitted from the scrape
+	// and exposed via SpecialValueMetricName instead.
+	SpecialValues []SpecialValueDef `yaml:"specialValues,omitempty"`
+}
+
+// SpecialValueMetricName is the name of the metric exposing caught special
+// values.
+const SpecialValueMetricName = "modbus_special_value_caught"
+
+// SpecialValueDef defines a raw value with a device specific meaning.
+type SpecialValueDef struct {
+	Value   *float64 `yaml:"value"`
+	Meaning string   `yaml:"meaning"`
 }
 
 // Validate semantically validates the given metric definition.
@@ -249,6 +264,28 @@ func (d *MetricDef) validate() error {
 
 	if d.Factor != nil && *d.Factor == 0.0 {
 		return fmt.Errorf("factor cannot be 0")
+	}
+
+	if d.Name == SpecialValueMetricName {
+		return fmt.Errorf("metric name %v is reserved", SpecialValueMetricName)
+	}
+
+	if len(d.SpecialValues) > 0 && d.DataType == ModbusBool {
+		return fmt.Errorf("specialValues cannot be used with boolean data type")
+	}
+
+	seen := map[float64]bool{}
+	for i, sv := range d.SpecialValues {
+		if sv.Value == nil {
+			return fmt.Errorf("specialValues entry %v: value must be set", i)
+		}
+		if sv.Meaning == "" {
+			return fmt.Errorf("specialValues entry %v: meaning must be set", i)
+		}
+		if seen[*sv.Value] {
+			return fmt.Errorf("specialValues entry %v: duplicate value %v", i, *sv.Value)
+		}
+		seen[*sv.Value] = true
 	}
 
 	return nil

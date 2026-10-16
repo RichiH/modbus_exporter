@@ -44,6 +44,15 @@ modules:
         # Factor is multiplied with the scraped value to produce the metric value
         # Optional.
         factor: 3.1415926535
+        # Raw values with a device specific meaning, e.g. "data pending".
+        # Compared against the raw value, before factor is applied.
+        # On a match, this metric is omitted from the scrape and
+        # modbus_special_value_caught{reading, address, meaning} exposes the
+        # raw value instead. Not valid for bool.
+        # Optional.
+        specialValues:
+          - value: -1
+            meaning: "sensor not ready"
 
       - name: "some_gauge"
         help: "some help for some gauge"
@@ -58,3 +67,14 @@ modules:
         dataType: bool
         bitOffset: 0
         metricType: gauge
+
+      - name: "watt_hours_total"
+        help: "some help for a device reporting special values"
+        address: 300025
+        dataType: uint32
+        metricType: counter
+        specialValues:
+          - value: 4294934512
+            meaning: "data pending, acquisition in progress"
+          - value: 4294934513
+            meaning: "reserved"
