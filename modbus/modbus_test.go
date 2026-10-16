@@ -15,6 +15,7 @@ package modbus
 
 import (
 	"encoding/binary"
+	"errors"
 	"math"
 	"testing"
 
@@ -129,6 +130,33 @@ func TestParseModbusData(t *testing.T) {
 				}
 			},
 			expectedValue: 1,
+		},
+		{
+			name: "bool, register, bit nine",
+			input: func() []byte {
+				return []byte{uint8(2), uint8(0)}
+			},
+			metricDef: func() *config.MetricDef {
+				offsetNine := 9
+				return &config.MetricDef{
+					DataType:  config.ModbusBool,
+					BitOffset: &offsetNine,
+				}
+			},
+			expectedValue: 1,
+		},
+		{
+			name: "bool, register, bit zero unset",
+			input: func() []byte {
+				return []byte{uint8(1), uint8(0)}
+			},
+			metricDef: func() *config.MetricDef {
+				return &config.MetricDef{
+					DataType:  config.ModbusBool,
+					BitOffset: &offsetZero,
+				}
+			},
+			expectedValue: 0,
 		},
 		{
 			name: "int16, default endian (big endian)",
@@ -496,6 +524,43 @@ func TestParseModbusDataInsufficientRegisters(t *testing.T) {
 	case *InsufficientRegistersError:
 	default:
 		t.Fatal("expected InsufficientRegistersError")
+	}
+}
+
+func TestParseModbusDataBoolInvalidInput(t *testing.T) {
+	offsetZero := 0
+	offsetEight := 8
+	offsetSixteen := 16
+
+	tests := []struct {
+		name          string
+		input         []byte
+		bitOffset     *int
+		insufficientR bool
+	}{
+		{name: "empty input", input: []byte{}, bitOffset: &offsetZero, insufficientR: true},
+		{name: "three bytes", input: []byte{0, 0, 0}, bitOffset: &offsetZero, insufficientR: true},
+		{name: "single byte, offset out of range", input: []byte{0xff}, bitOffset: &offsetEight},
+		{name: "register, offset out of range", input: []byte{0xff, 0xff}, bitOffset: &offsetSixteen},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			d := config.MetricDef{
+				DataType:  config.ModbusBool,
+				BitOffset: test.bitOffset,
+			}
+
+			_, err := parseModbusData(d, test.input)
+			if err == nil {
+				t.Fatal("expected error but got nil")
+			}
+
+			var insufficient *InsufficientRegistersError
+			if test.insufficientR && !errors.As(err, &insufficient) {
+				t.Fatalf("expected InsufficientRegistersError but got %T", err)
+			}
+		})
 	}
 }
 

@@ -293,8 +293,21 @@ func parseModbusData(d config.MetricDef, rawData []byte) (float64, error) {
 				return float64(0), fmt.Errorf("expected bit position on boolean data type")
 			}
 
-			// Convert byte to uint16
-			data := binary.BigEndian.Uint16(rawData)
+			// Coils and discrete inputs return a single byte, holding and
+			// input registers return a 16 bit word.
+			var data uint16
+			switch len(rawData) {
+			case 1:
+				data = uint16(rawData[0])
+			case 2:
+				data = binary.BigEndian.Uint16(rawData)
+			default:
+				return float64(0), &InsufficientRegistersError{fmt.Sprintf("expected 1 or 2 bytes, got %v", len(rawData))}
+			}
+
+			if *d.BitOffset < 0 || *d.BitOffset >= len(rawData)*8 {
+				return float64(0), fmt.Errorf("bit offset %v out of range for %v byte(s)", *d.BitOffset, len(rawData))
+			}
 
 			if data&(uint16(1)<<uint16(*d.BitOffset)) > 0 {
 				return float64(1), nil
