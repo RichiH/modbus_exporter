@@ -76,8 +76,11 @@ Flags:
       --web.listen-address=:9602 ...  
                                  Addresses on which to expose metrics and web
                                  interface. Repeatable for multiple addresses.
-      --web.config.file=""       [EXPERIMENTAL] Path to configuration file that
-                                 can enable TLS or authentication.
+                                 Examples: `:9100` or `[::1]:9100` for http,
+                                 `vsock://:9100` for vsock
+      --web.config.file=""       Path to configuration file that can
+                                 enable TLS or authentication. See:
+                                 https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
       --log.level=info           Only log messages with the given severity or
                                  above. One of: [debug, info, warn, error]
       --log.format=logfmt        Output format of log messages. One of: [logfmt,

@@ -14,13 +14,15 @@
 package main
 
 import (
+	"bytes"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/RichiH/modbus_exporter/config"
 	"github.com/RichiH/modbus_exporter/modbus"
-	"github.com/go-kit/log"
 )
 
 func TestScrapeHandler(t *testing.T) {
@@ -29,6 +31,8 @@ func TestScrapeHandler(t *testing.T) {
 		code   int
 		config func() config.Config
 		params map[string]string
+		// logContains is a substring expected in the log output, if set.
+		logContains string
 	}{
 		{
 			name: "no module",
@@ -84,7 +88,8 @@ func TestScrapeHandler(t *testing.T) {
 
 				return c
 			},
-			params: map[string]string{"module": "my_module", "target": "10.0.0.10", "sub_target": "10"},
+			params:      map[string]string{"module": "my_module", "target": "10.0.0.10", "sub_target": "10"},
+			logContains: `level=ERROR msg="failed to scrape"`,
 		},
 	}
 
@@ -108,13 +113,20 @@ func TestScrapeHandler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			scrapeHandler(exporter, rr, req, log.NewNopLogger())
+			var logs bytes.Buffer
+			logger := slog.New(slog.NewTextHandler(&logs, nil))
+
+			scrapeHandler(exporter, rr, req, logger)
 
 			if status := rr.Code; status != test.code {
 				t.Errorf(
 					"handler returned wrong status code: got %v want %v, body: '%v'",
 					status, test.code, rr.Body.String(),
 				)
+			}
+
+			if test.logContains != "" && !strings.Contains(logs.String(), test.logContains) {
+				t.Errorf("expected log output to contain %q, got: %q", test.logContains, logs.String())
 			}
 		})
 	}
