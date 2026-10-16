@@ -1,6 +1,6 @@
 module github.com/RichiH/modbus_exporter
 
-go 1.24.0
+go 1.26.0
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.3.2
