@@ -16,6 +16,7 @@ package modbus
 import (
 	"encoding/binary"
 	"fmt"
+	"maps"
 	"math"
 	"strconv"
 	"time"
@@ -92,6 +93,8 @@ func registerMetrics(reg prometheus.Registerer, moduleName string, metrics []met
 	for _, m := range metrics {
 		if m.Labels == nil {
 			m.Labels = map[string]string{}
+		} else {
+			m.Labels = maps.Clone(m.Labels)
 		}
 		m.Labels["module"] = moduleName
 
